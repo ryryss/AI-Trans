@@ -268,6 +268,50 @@ async function testConnection(config) {
   }
 }
 
+// ---------- Balance queries (only providers with a public balance API) ----------
+// OpenAI / Gemini / Claude 等没有公开的余额查询接口，无法查询；以下是有官方接口的服务商
+const BALANCE_APIS = {
+  deepseek: async (key) => {
+    const resp = await fetch('https://api.deepseek.com/user/balance', {
+      headers: { Authorization: 'Bearer ' + key, Accept: 'application/json' }
+    });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status + ' · ' + await apiErrorDetail(resp));
+    const data = await resp.json();
+    const parts = (data.balance_infos || []).map((b) => b.currency + ' ' + b.total_balance + ' (+ ' + b.granted_balance + ')');
+    return { ok: true, text: parts.join('; ') };
+  },
+  openrouter: async (key) => {
+    const resp = await fetch('https://openrouter.ai/api/v1/auth/key', {
+      headers: { Authorization: 'Bearer ' + key }
+    });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status + ' · ' + await apiErrorDetail(resp));
+    const data = await resp.json();
+    const d = (data && data.data) || {};
+    if (typeof d.limit === 'number' && typeof d.usage === 'number') {
+      return { ok: true, text: 'USD ' + Math.max(0, d.limit - d.usage).toFixed(2) + ' / ' + d.limit.toFixed(2) };
+    }
+    return { ok: true, text: d.is_free_tier ? 'Free tier' : 'N/A' };
+  },
+  moonshot: async (key) => {
+    const resp = await fetch('https://api.moonshot.cn/v1/users/me/balance', {
+      headers: { Authorization: 'Bearer ' + key }
+    });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status + ' · ' + await apiErrorDetail(resp));
+    const data = await resp.json();
+    const d = (data && data.data) || {};
+    return { ok: true, text: 'CNY ' + (d.available_balance != null ? d.available_balance : 'N/A') };
+  },
+  siliconflow: async (key) => {
+    const resp = await fetch('https://api.siliconflow.cn/v1/user/info', {
+      headers: { Authorization: 'Bearer ' + key }
+    });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status + ' · ' + await apiErrorDetail(resp));
+    const data = await resp.json();
+    const d = (data && data.data) || {};
+    return { ok: true, text: d.balance != null ? 'CNY ' + d.balance : 'N/A' };
+  }
+};
+
 // ---------- Message router ----------
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (!msg) return;
@@ -340,20 +384,15 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 
   if (msg.type === 'DS_BALANCE') {
-    // Official balance endpoint — DeepSeek only, free of charge.
+    // 官方余额查询：仅支持有公开余额接口的服务商（DeepSeek/OpenRouter/Moonshot/SiliconFlow），其余返回 NA
     chrome.storage.local.get(['provider', 'apiKeys']).then(async (s) => {
-      if ((s.provider || 'deepseek') !== 'deepseek') return sendResponse({ ok: false, code: 'NA', detail: '' });
-      const key = (s.apiKeys && s.apiKeys.deepseek) || '';
+      const provId = s.provider || 'deepseek';
+      const fetcher = BALANCE_APIS[provId];
+      if (!fetcher) return sendResponse({ ok: false, code: 'NA', detail: '' });
+      const key = (s.apiKeys && s.apiKeys[provId]) || '';
       if (!key) return sendResponse({ ok: false, code: 'NO_KEY', detail: '' });
       try {
-        const resp = await fetch('https://api.deepseek.com/user/balance', {
-          headers: { Authorization: 'Bearer ' + key, Accept: 'application/json' }
-        });
-        if (!resp.ok) {
-          const err = errorToCode(new Error('HTTP ' + resp.status + ' · ' + await apiErrorDetail(resp)));
-          return sendResponse({ ok: false, code: err.code, detail: err.detail });
-        }
-        sendResponse({ ok: true, data: await resp.json() });
+        sendResponse(await fetcher(key));
       } catch (e) {
         const err = errorToCode(e);
         sendResponse({ ok: false, code: err.code, detail: err.detail });

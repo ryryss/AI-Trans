@@ -6,6 +6,8 @@ let providers = [];
 let currentHost = '';
 let settings = {}; // cached snapshot
 let keyVisible = false; // 密钥明文显示开关
+// 有官方余额查询接口的服务商（其余服务商不显示余额行）
+const BALANCE_PROVIDERS = ['deepseek', 'openrouter', 'moonshot', 'siliconflow'];
 
 function t(key, vars) { return aiTransT(uiLang, key, vars); }
 
@@ -97,8 +99,8 @@ function onProviderChange() {
   $('apiKey').value = apiKeys[p ? p.id : ''] || '';
   refreshKeyHint();
   // balance row visibility
-  $('statBalance').hidden = !(p && p.id === 'deepseek');
-  if (p && p.id === 'deepseek') loadBalance();
+  $('statBalance').hidden = !(p && BALANCE_PROVIDERS.includes(p.id));
+  if (p && BALANCE_PROVIDERS.includes(p.id)) loadBalance();
 }
 
 // ---------- Settings ----------
@@ -192,7 +194,7 @@ function persistSettings(provId) {
 
   setStatus(t('saved'));
   const prov = currentProvider();
-  if (prov && prov.id === 'deepseek') loadBalance();
+  if (prov && BALANCE_PROVIDERS.includes(prov.id)) loadBalance();
   return p;
 }
 
@@ -238,13 +240,7 @@ async function loadBalance() {
       el.style.color = '#dc2626';
       return;
     }
-    const infos = (res.data && res.data.balance_infos) || [];
-    if (!infos.length) {
-      el.textContent = t('balance') + ': —';
-      return;
-    }
-    const parts = infos.map((b) => b.currency + ' ' + b.total_balance + ' (+ ' + b.granted_balance + ')');
-    el.textContent = t('balance') + ': ' + parts.join('; ');
+    el.textContent = t('balance') + ': ' + ((res && res.text) ? res.text : '—');
     el.style.color = '#16a34a';
   } catch (e) {
     el.textContent = t('balance') + ': ' + t('balanceFailed');
@@ -402,5 +398,5 @@ $('clearStats').addEventListener('click', async () => {
 
 load().then(() => {
   loadStats();
-  if (currentProvider() && currentProvider().id === 'deepseek') loadBalance();
+  if (currentProvider() && BALANCE_PROVIDERS.includes(currentProvider().id)) loadBalance();
 });

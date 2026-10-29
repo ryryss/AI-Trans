@@ -23,7 +23,7 @@ AI-Trans is a minimalist Chrome extension that translates entire web pages with 
 - **Draggable floating buttons** — one tap to translate, one tap to restore; the position is remembered
 - **Text translation panel** — a floating input box (Google-Translate style): type anything, auto-detect the source language, swap languages with one click
 - **Local translation cache** — translated sentences are cached in your browser (max 20,000 entries / ~2M characters with LRU auto-eviction), so revisiting a page is instant and costs nothing
-- **Usage & balance display** — request count, input/output tokens, estimated cost where official pricing is available (DeepSeek), and your real DeepSeek balance via the official API
+- **Usage & balance display** — request count, input/output tokens, estimated cost where official pricing is available (DeepSeek), and your real balance via the official API for supported providers (DeepSeek, OpenRouter, Moonshot, SiliconFlow)
 - **Built-in diagnostics** — one-click connection test, fetch-the-model-list (kills 404s), and every error explained in plain language with a suggested fix
 - **Auto-saving settings** — no "Save" button: every change is persisted instantly (clear the key field to delete a key)
 - **Fully localized UI** — English, 简体中文, 繁體中文, 日本語, 한국어, Deutsch, Français, Español, Русский, Português (BR); follows your browser language by default
@@ -82,7 +82,8 @@ AI-Trans is a minimalist Chrome extension that translates entire web pages with 
 
 ### Statistics & balance
 - The popup shows **today's** and **all-time** request count and input/output tokens, counted locally.
-- With DeepSeek selected, it also shows the **estimated cost** (official pricing, peak/off-peak aware) and your **real balance** from the official API.
+- With DeepSeek selected, it also shows the **estimated cost** (official pricing, peak/off-peak aware).
+- With a supported provider selected (**DeepSeek, OpenRouter, Moonshot, SiliconFlow**), it fetches your **real balance** from the provider's official API. Other providers (OpenAI, Gemini, Claude, …) don't expose a public balance endpoint, so no balance row is shown for them.
 
 ### Language
 - The UI follows your **browser language** by default (10 languages).

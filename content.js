@@ -21,7 +21,8 @@
   const WIDGET_ID = 'ai-trans-widget';
   const CONCURRENCY = 5;   // parallel API requests
   const CACHE_KEY = 'transCacheV1';
-  const CACHE_CAP = 20000; // persisted in storage.local (survives reload/restart)
+  const CACHE_CAP = 20000;          // 缓存条目数上限
+  const CACHE_SIZE_CHARS = 2000000; // 缓存总字符数上限（约 6MB，storage.local 配额为 10MB）
   const cache = new Map(); // "targetLang|host|text" -> translation
 
   const t = (key, vars) => aiTransT(settings.uiLang, key, vars);
@@ -121,11 +122,12 @@
     return settings.targetLang + '|' + location.hostname + '|' + core;
   }
 
+  // LRU 缓存：新写入/命中的条目排到最前，超限时淘汰最久未用的
   function cacheSet(k, v) {
+    cache.delete(k);
     cache.set(k, v);
     if (cache.size > CACHE_CAP) {
-      const oldest = cache.keys().next().value;
-      if (oldest !== k) cache.delete(oldest);
+      cache.delete(cache.keys().next().value);
     }
     scheduleCacheSave();
   }
@@ -136,19 +138,28 @@
     cacheSaveTimer = setTimeout(flushCache, 800);
   }
 
-  function flushCache() {
+  function buildCacheObj() {
+    const obj = {};
+    let count = 0;
+    let size = 0;
+    for (const [k, v] of cache) {
+      obj[k] = v;
+      size += k.length + v.length;
+      if (++count >= CACHE_CAP || size > CACHE_SIZE_CHARS) break;
+    }
+    return obj;
+  }
+
+  async function flushCache() {
     clearTimeout(cacheSaveTimer);
     try {
-      const obj = {};
-      let count = 0;
-      let size = 0;
-      for (const [k, v] of cache) {
-        obj[k] = v;
-        size += k.length + v.length;
-        if (++count >= CACHE_CAP || size > 2000000) break;
-      }
-      chrome.storage.local.set({ [CACHE_KEY]: obj }).catch(() => {});
-    } catch (e) {}
+      await chrome.storage.local.set({ [CACHE_KEY]: buildCacheObj() });
+    } catch (e) {
+      // 存储配额不够：淘汰一半最久未用的缓存后重试一次
+      const half = Math.ceil(cache.size / 2);
+      for (let i = 0; i < half && cache.size; i++) cache.delete(cache.keys().next().value);
+      try { await chrome.storage.local.set({ [CACHE_KEY]: buildCacheObj() }); } catch (e2) {}
+    }
   }
 
   window.addEventListener('pagehide', () => { flushCache(); });
@@ -201,8 +212,10 @@
       // 1) cache hits are applied instantly without any API call
       misses = [];
       for (const n of nodes) {
-        const hit = cache.get(cacheKey(n._ds.core));
+        const ck = cacheKey(n._ds.core);
+        const hit = cache.get(ck);
         if (hit) {
+          cache.delete(ck); cache.set(ck, hit); // LRU 刷新
           const before = n.nodeValue;
           const written = n._ds.lead + hit + n._ds.trail;
           translated.set(n, { orig: before, written });
@@ -420,6 +433,13 @@
     if (msg.type === 'DS_TRANSLATE') { translatePage(document.body); startObserver(); }
     else if (msg.type === 'DS_RESTORE') restorePage();
     else if (msg.type === 'DS_TOGGLE') { translated.size ? restorePage() : (translatePage(document.body), startObserver()); }
+    else if (msg.type === 'DS_RESET') {
+      // 面板"重置所有数据"：清空内存缓存、还原译文，防止旧缓存被写回存储
+      cache.clear();
+      stopObserver();
+      for (const [node, rec] of translated) { node.nodeValue = rec.orig; }
+      translated.clear();
+    }
     else if (msg.type === 'DS_SETTINGS') {
       settings = Object.assign(settings, msg.settings || {});
       settings.uiLang = (!settings.uiLang || settings.uiLang === 'auto') ? aiTransDetect() : aiTransLang(settings.uiLang);

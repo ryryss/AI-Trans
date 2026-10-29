@@ -21,8 +21,8 @@ AI-Trans is a minimalist Chrome extension that translates entire web pages with 
 - **Self-hosted & niche endpoints** — any OpenAI-compatible service works by entering your own base URL + API key + model name
 - **Smart dynamic content** — games, live feeds, infinite scroll: newly rendered or rewritten text is translated automatically while you browse
 - **Draggable floating buttons** — one tap to translate, one tap to restore; the position is remembered
-- **Local translation cache** — translated sentences are cached in your browser, so revisiting a page is instant and costs nothing
-- **Usage & balance display** — request count, input/output tokens, estimated spend (DeepSeek pricing), and your real DeepSeek balance via the official API
+- **Local translation cache** — translated sentences are cached in your browser (max 20,000 entries / ~2M characters with LRU auto-eviction), so revisiting a page is instant and costs nothing
+- **Usage & balance display** — request count, input/output tokens, estimated cost where official pricing is available (DeepSeek), and your real DeepSeek balance via the official API
 - **Built-in diagnostics** — one-click connection test, fetch-the-model-list (kills 404s), and every error explained in plain language with a suggested fix
 - **Auto-saving settings** — no "Save" button: every change is persisted instantly (clear the key field to delete a key)
 - **Fully localized UI** — English, 简体中文, 繁體中文, 日本語, 한국어, Deutsch, Français, Español, Русский, Português (BR); follows your browser language by default
@@ -80,7 +80,7 @@ AI-Trans is a minimalist Chrome extension that translates entire web pages with 
 - Once you pick a language in the popup, it is used **strictly everywhere** — popup, toasts, floating buttons, error messages.
 
 ### Wipe everything
-- Click **Reset all data** at the bottom of the popup to clear keys, cache, statistics, settings and the widget position. Uninstalling the extension also clears all its data.
+- Click **Reset all data** at the bottom of the popup to clear keys, cache, statistics, settings and the widget position. Open pages are restored to their original text, and the in-memory cache of every tab is cleared too (so nothing is written back). Uninstalling the extension also clears all its data.
 
 ## 🎁 Free API keys for testing
 
@@ -124,6 +124,7 @@ A `MutationObserver` watches for new or rewritten text (`childList` + `character
 - **What does a 404 (or other error) mean?** Every failure is explained in plain language with a suggested fix. Common cases: 404 → wrong Base URL or model name; 401 → invalid/expired key; 402 → insufficient balance; 403 → no access to this model; 429 → rate limit or daily free quota reached; 5xx → provider server issue, retry later; timeout/network → the provider is unreachable from your network.
 - **I'm in mainland China — overseas providers fail.** Google/OpenAI/Anthropic endpoints are generally not directly reachable from mainland China. Use a proxy, or pick a domestic provider: SiliconFlow, Zhipu GLM or DeepSeek all work without one.
 - **How do I delete a saved key or wipe everything?** Empty the API key field (auto-saves), or click **Reset all data** at the bottom of the popup. Uninstalling the extension also clears all data.
+- **Is the translation cache limited?** Yes — per language + site it holds at most **20,000 entries or ~2 million characters** (whichever comes first) and evicts the least-recently-used entries automatically. If browser storage ever runs out of quota, the oldest half is dropped and the write retried. Usage statistics keep only the last 30 days.
 - **Translation feels slow?** Use a fast non-reasoning model. DeepSeek's thinking mode is already disabled by the extension; provider-side peak hours also affect latency.
 
 ## 🤖 Credits & testing

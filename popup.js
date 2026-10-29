@@ -326,6 +326,11 @@ $('resetAll').addEventListener('click', async () => {
   if (!confirm(t('resetConfirm'))) return;
   try {
     await chrome.storage.local.clear(); // 清空密钥、缓存、统计、设置、按钮位置
+    // 通知所有已打开页面：清空内存缓存并还原译文，防止旧缓存被写回存储
+    const tabs = await chrome.tabs.query({});
+    for (const tab of tabs) {
+      if (tab.id != null) chrome.tabs.sendMessage(tab.id, { type: 'DS_RESET' }).catch(() => {});
+    }
     location.reload();
   } catch (e) {}
 });

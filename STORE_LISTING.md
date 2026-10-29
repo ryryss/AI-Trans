@@ -20,6 +20,7 @@ Features:
 - Dynamic content translation — games, live feeds and infinite scroll keep translating automatically
 - Draggable floating translate/restore buttons (position remembered)
 - Built-in text translation panel (Google-Translate style, auto language detection and swap)
+- Text-to-speech for source and translation using local system voices (free, offline)
 - Local translation cache — revisited pages translate instantly and cost nothing
 - Usage statistics — requests, input/output tokens, estimated cost, and your real balance via the official API for supported providers (DeepSeek, OpenRouter, Moonshot, SiliconFlow)
 - One-click connection test and model-list fetching — never guess a model name again
@@ -39,6 +40,7 @@ AI-Trans 是一款极简、开源的 AI 翻译扩展。它把整个网页**原�
 - 动态内容自动翻译：游戏、直播、无限滚动持续跟进
 - 可拖动的浮动翻译/还原按钮（位置记忆）
 - 内置文本翻译面板（类似谷歌翻译，自动检测语言、一键互换）
+- 原文/译文语音朗读（系统本地语音，免费、离线）
 - 本地翻译缓存：翻过的页面秒开、零花费
 - 用量统计：请求次数、tokens、预估费用、官方余额查询（支持 DeepSeek、OpenRouter、Moonshot、SiliconFlow）
 - 一键测试连接、一键拉取模型列表，告别 404

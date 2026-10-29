@@ -22,6 +22,7 @@ AI-Trans is a minimalist Chrome extension that translates entire web pages with 
 - **Smart dynamic content** — games, live feeds, infinite scroll: newly rendered or rewritten text is translated automatically while you browse
 - **Draggable floating buttons** — one tap to translate, one tap to restore; the position is remembered
 - **Text translation panel** — a floating input box (Google-Translate style): type anything, auto-detect the source language, swap languages with one click
+- **Text-to-speech** — read the source or the translation aloud with your system's local voices (free, offline, no API cost)
 - **Local translation cache** — translated sentences are cached in your browser (max 20,000 entries / ~2M characters with LRU auto-eviction), so revisiting a page is instant and costs nothing
 - **Usage & balance display** — request count, input/output tokens, estimated cost where official pricing is available (DeepSeek), and your real balance via the official API for supported providers (DeepSeek, OpenRouter, Moonshot, SiliconFlow)
 - **Built-in diagnostics** — one-click connection test, fetch-the-model-list (kills 404s), and every error explained in plain language with a suggested fix

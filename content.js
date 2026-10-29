@@ -446,6 +446,54 @@
     return settings.targetLang || aiTransDefaultTarget(settings.uiLang);
   }
 
+  // 模型返回的英文语言名 → 用 Intl.DisplayNames 转成本地化名称
+  const DETECTED_MAP = {
+    'english': 'en', 'simplified chinese': 'zh-CN', 'chinese': 'zh-CN', 'traditional chinese': 'zh-TW',
+    'japanese': 'ja', 'korean': 'ko', 'german': 'de', 'french': 'fr', 'spanish': 'es', 'russian': 'ru',
+    'portuguese': 'pt', 'italian': 'it', 'arabic': 'ar', 'hindi': 'hi', 'thai': 'th', 'vietnamese': 'vi',
+    'dutch': 'nl', 'polish': 'pl', 'turkish': 'tr', 'indonesian': 'id'
+  };
+
+  function localizedLangName(enName) {
+    const code = DETECTED_MAP[String(enName || '').toLowerCase()];
+    if (code) {
+      try {
+        const dn = new Intl.DisplayNames([aiTransLang(settings.uiLang)], { type: 'language' });
+        const n = dn.of(code);
+        if (n) return n;
+      } catch (e) {}
+    }
+    return enName || '';
+  }
+
+  // 检测结果显示在"自动检测"右侧，如：自动检测（英语）
+  function updateAutoOption() {
+    if (!panel) return;
+    const o = panel._els.srcSel.options[0];
+    if (!o || o.value !== 'auto') return;
+    o.textContent = t('panelAuto') + (panel._detected ? ' (' + panel._detected + ')' : '');
+  }
+
+  // 分辨率自适应：窗口窄时左右布局改为上下布局
+  function responsivePanelBody() {
+    if (!panel) return;
+    const narrow = panel.offsetWidth < 440;
+    panel._els.body.style.flexDirection = narrow ? 'column' : 'row';
+    panel._els.srcArea.style.height = narrow ? '90px' : '180px';
+    panel._els.tgtArea.style.height = narrow ? '90px' : '180px';
+  }
+
+  window.addEventListener('resize', () => {
+    if (!panel || panel.hidden) return;
+    const r = panel.getBoundingClientRect();
+    applyPanelPos(
+      panel,
+      clamp(r.left, 0, Math.max(0, window.innerWidth - panel.offsetWidth)),
+      clamp(r.top, 0, Math.max(0, window.innerHeight - panel.offsetHeight))
+    );
+    responsivePanelBody();
+  });
+
   function applyPanelPos(el, x, y) {
     el.style.left = x + 'px';
     el.style.top = y + 'px';
@@ -514,7 +562,13 @@
     if (!panel) return;
     const els = panel._els;
     const text = els.srcArea.value.trim();
-    if (!text) { els.tgtArea.value = ''; setPanelHint(null); return; }
+    if (!text) {
+      els.tgtArea.value = '';
+      panel._detected = '';
+      updateAutoOption();
+      setPanelHint(null);
+      return;
+    }
     setPanelHint({ kind: 'busy' });
     const src = els.srcSel.value;
     const tgt = els.tgtSel.value;
@@ -531,7 +585,9 @@
       }
       const tr = res.translations && res.translations[0];
       els.tgtArea.value = typeof tr === 'string' ? tr : '';
-      setPanelHint((src === 'auto' && res.detected) ? { kind: 'detected', l: res.detected } : null);
+      panel._detected = (src === 'auto' && res.detected) ? localizedLangName(res.detected) : '';
+      updateAutoOption();
+      setPanelHint(null);
     } catch (e) {
       setPanelHint({ kind: 'text', text: String((e && e.message) || e) });
     }
@@ -603,7 +659,9 @@
 
     panel.append(header, langRow, body, foot);
     (document.body || document.documentElement).appendChild(panel);
-    panel._els = { title, srcSel, tgtSel, srcArea, tgtArea, hint, goBtn, swapBtn };
+    panel._els = { title, srcSel, tgtSel, srcArea, tgtArea, hint, goBtn, swapBtn, body };
+    panel._detected = '';
+    responsivePanelBody();
 
     fillPanelLangs(srcSel, true);
     fillPanelLangs(tgtSel, false);
@@ -703,8 +761,7 @@
           panel._els.tgtArea.placeholder = t('phTarget');
           panel._els.goBtn.textContent = t('panelTranslate');
           panel._els.swapBtn.title = t('swapTitle');
-          const firstOpt = panel._els.srcSel.options[0];
-          if (firstOpt && firstOpt.value === 'auto') firstOpt.textContent = t('panelAuto');
+          updateAutoOption();
           renderPanelHint(); // 已有提示（如错误）立即用新语言重渲染
         }
       }

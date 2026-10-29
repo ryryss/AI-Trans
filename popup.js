@@ -159,45 +159,41 @@ let pendingProvider = null; // 输入那一刻绑定的服务商，防止防抖�
 let pendingSave = Promise.resolve(); // 待完成的保存，点击翻译前先等它落盘
 
 function persistSettings(provId) {
-  const p = doPersist(provId);
-  pendingSave = p.catch(() => {});
-  return p;
-}
-
-async function doPersist(provId) {
   provId = provId || $('provider').value;
-  const s = await chrome.storage.local.get(['apiKeys', 'autoSites']);
-  const apiKeys = s.apiKeys || {};
-  const autoSites = s.autoSites || {};
-  apiKeys[provId] = $('apiKey').value.trim(); // 允许空值：清空输入框即删除密钥
-
+  // 用内存副本直接构建 payload 并同步发起写入（不先异步读存储），
+  // 面板关闭瞬间保存也不丢失（写入请求在上下文销毁前已发出）
+  settings.apiKeys = settings.apiKeys || {};
+  settings.apiKeys[provId] = $('apiKey').value.trim(); // 允许空值 = 清除该服务商密钥
+  if (currentHost) {
+    settings.autoSites = settings.autoSites || {};
+    settings.autoSites[currentHost] = $('autoSite').checked;
+  }
   const payload = {
     provider: provId,
-    apiKeys,
+    apiKeys: settings.apiKeys,
     model: $('model').value.trim(),
     targetLang: $('targetLang').value,
     uiLang: $('uiLang').value,
     customBaseURL: $('baseURL').value.trim(),
     customModel: $('model').value.trim(),
-    globalAuto: $('autoGlobal').checked
+    globalAuto: $('autoGlobal').checked,
+    autoSites: settings.autoSites
   };
-  if (currentHost) {
-    autoSites[currentHost] = $('autoSite').checked;
-    payload.autoSites = autoSites;
-  }
-  await chrome.storage.local.set(payload);
-  settings = Object.assign(settings, payload);
+  const p = chrome.storage.local.set(payload).catch(() => {});
+  pendingSave = p;
 
   try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (tab && tab.id != null) {
-      chrome.tabs.sendMessage(tab.id, { type: 'DS_SETTINGS', settings: payload }).catch(() => {});
-    }
+    chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
+      if (tab && tab.id != null) {
+        chrome.tabs.sendMessage(tab.id, { type: 'DS_SETTINGS', settings: payload }).catch(() => {});
+      }
+    }).catch(() => {});
   } catch (e) {}
 
   setStatus(t('saved'));
-  const p = currentProvider();
-  if (p && p.id === 'deepseek') loadBalance();
+  const prov = currentProvider();
+  if (prov && prov.id === 'deepseek') loadBalance();
+  return p;
 }
 
 function scheduleAutoSave() {
@@ -385,8 +381,16 @@ $('resetAll').addEventListener('click', async () => {
     location.reload();
   } catch (e) {}
 });
-$('translate').addEventListener('click', async () => { await pendingSave; sendToTab('DS_TRANSLATE'); });
-$('restore').addEventListener('click', async () => { await pendingSave; sendToTab('DS_RESTORE'); });
+$('translate').addEventListener('click', async () => {
+  clearTimeout(saveTimer);
+  await persistSettings(); // 先把最新输入立即落盘，再翻译
+  sendToTab('DS_TRANSLATE');
+});
+$('restore').addEventListener('click', async () => {
+  clearTimeout(saveTimer);
+  await persistSettings();
+  sendToTab('DS_RESTORE');
+});
 $('clearStats').addEventListener('click', async () => {
   try {
     await chrome.runtime.sendMessage({ type: 'DS_CLEAR_STATS' });

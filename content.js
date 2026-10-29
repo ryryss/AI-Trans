@@ -479,8 +479,6 @@
     if (!panel) return;
     const narrow = panel.offsetWidth < 440;
     panel._els.body.style.flexDirection = narrow ? 'column' : 'row';
-    panel._els.srcArea.style.height = narrow ? '90px' : '180px';
-    panel._els.tgtArea.style.height = narrow ? '90px' : '180px';
   }
 
   window.addEventListener('resize', () => {
@@ -491,6 +489,8 @@
       clamp(r.left, 0, Math.max(0, window.innerWidth - panel.offsetWidth)),
       clamp(r.top, 0, Math.max(0, window.innerHeight - panel.offsetHeight))
     );
+    panel.style.width = clamp(panel.offsetWidth, 320, Math.max(320, window.innerWidth - 16)) + 'px';
+    panel.style.height = clamp(panel.offsetHeight, 240, Math.max(240, window.innerHeight - 16)) + 'px';
     responsivePanelBody();
   });
 
@@ -554,6 +554,8 @@
     if (!d) { panel._els.hint.textContent = ''; return; }
     if (d.kind === 'busy') panel._els.hint.textContent = '…';
     else if (d.kind === 'detected') panel._els.hint.textContent = t('detected', { l: d.l });
+    else if (d.kind === 'tokens') panel._els.hint.textContent = t('panelTokens', { t: d.t });
+    else if (d.kind === 'cached') panel._els.hint.textContent = t('panelCached');
     else if (d.kind === 'err') panel._els.hint.textContent = aiTransErrText(settings.uiLang, d.code, d.detail);
     else panel._els.hint.textContent = String(d.text || '');
   }
@@ -572,6 +574,17 @@
     setPanelHint({ kind: 'busy' });
     const src = els.srcSel.value;
     const tgt = els.tgtSel.value;
+    // 缓存：同一目标语言的同一段文本直接命中，不调 API
+    const ck = tgt + '|panel|' + text;
+    const hit = cache.get(ck);
+    if (hit) {
+      cache.delete(ck); cache.set(ck, hit); // LRU 刷新
+      els.tgtArea.value = hit;
+      panel._detected = '';
+      updateAutoOption();
+      setPanelHint({ kind: 'cached' });
+      return;
+    }
     try {
       const res = await chrome.runtime.sendMessage({
         type: 'DS_API',
@@ -585,9 +598,13 @@
       }
       const tr = res.translations && res.translations[0];
       els.tgtArea.value = typeof tr === 'string' ? tr : '';
+      if (typeof tr === 'string' && tr.trim()) {
+        cacheSet(ck, tr); // 写入缓存，下次秒回
+      }
       panel._detected = (src === 'auto' && res.detected) ? localizedLangName(res.detected) : '';
       updateAutoOption();
-      setPanelHint(null);
+      const used = res.usage ? (res.usage.prompt_tokens || 0) + (res.usage.completion_tokens || 0) : 0;
+      setPanelHint({ kind: 'tokens', t: fmtTokens(used) });
     } catch (e) {
       setPanelHint({ kind: 'text', text: String((e && e.message) || e) });
     }
@@ -599,9 +616,10 @@
     panel.setAttribute('translate', 'no');
     panel.hidden = true;
     panel.style.cssText =
-      'position:fixed;right:70px;bottom:16px;z-index:2147483646;width:560px;max-width:calc(100vw - 32px);' +
+      'position:fixed;right:70px;bottom:16px;z-index:2147483646;width:560px;height:380px;max-width:calc(100vw - 32px);' +
       'background:#fff;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.28);' +
-      'font:13px/1.5 system-ui,"Segoe UI",sans-serif;color:#1f2937;overflow:hidden;';
+      'font:13px/1.5 system-ui,"Segoe UI",sans-serif;color:#1f2937;overflow:hidden;' +
+      'display:flex;flex-direction:column;';
 
     const header = document.createElement('div');
     header.style.cssText =
@@ -632,14 +650,14 @@
     langRow.append(srcSel, swapBtn, tgtSel);
 
     const body = document.createElement('div');
-    body.style.cssText = 'display:flex;gap:8px;padding:8px 10px 0;';
+    body.style.cssText = 'display:flex;gap:8px;padding:8px 10px 0;flex:1;min-height:0;';
     const srcArea = document.createElement('textarea');
     srcArea.placeholder = t('phSource');
     const tgtArea = document.createElement('textarea');
     tgtArea.placeholder = t('phTarget');
     tgtArea.readOnly = true;
     const areaStyle =
-      'flex:1;min-width:0;height:180px;resize:none;border:1px solid #e5e7eb;border-radius:8px;' +
+      'flex:1;min-width:0;min-height:60px;resize:none;border:1px solid #e5e7eb;border-radius:8px;' +
       'padding:8px;font:inherit;background:#f9fafb;';
     srcArea.style.cssText = areaStyle;
     tgtArea.style.cssText = areaStyle;
@@ -662,6 +680,38 @@
     panel._els = { title, srcSel, tgtSel, srcArea, tgtArea, hint, goBtn, swapBtn, body };
     panel._detected = '';
     responsivePanelBody();
+
+    // 右下角拖拽改尺寸（宽度/高度都记忆）
+    const handle = document.createElement('div');
+    handle.style.cssText =
+      'position:absolute;right:0;bottom:0;width:18px;height:18px;cursor:nwse-resize;touch-action:none;' +
+      'background:repeating-linear-gradient(315deg,#cbd5e1 0 2px,transparent 2px 6px);';
+    handle.addEventListener('pointerdown', (e) => {
+      e.stopPropagation();
+      if (e.button !== 0 && e.pointerType === 'mouse') return;
+      const sw = panel.offsetWidth;
+      const sh = panel.offsetHeight;
+      const sx = e.clientX;
+      const sy = e.clientY;
+      const rect = panel.getBoundingClientRect();
+      const onMove = (ev) => {
+        panel.style.width = clamp(sw + ev.clientX - sx, 320, Math.max(320, window.innerWidth - rect.left - 8)) + 'px';
+        panel.style.height = clamp(sh + ev.clientY - sy, 240, Math.max(240, window.innerHeight - rect.top - 8)) + 'px';
+        responsivePanelBody();
+      };
+      const onUp = () => {
+        try {
+          chrome.storage.local.set({ panelSize: { w: panel.offsetWidth, h: panel.offsetHeight } }).catch(() => {});
+        } catch (err) {}
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+        window.removeEventListener('pointercancel', onUp);
+      };
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+      window.addEventListener('pointercancel', onUp);
+    });
+    panel.appendChild(handle);
 
     fillPanelLangs(srcSel, true);
     fillPanelLangs(tgtSel, false);
@@ -703,10 +753,15 @@
 
     // 恢复上次位置和语言选择
     try {
-      chrome.storage.local.get(['panelPos', 'panelSrc', 'panelTgt']).then((s) => {
+      chrome.storage.local.get(['panelPos', 'panelSrc', 'panelTgt', 'panelSize']).then((s) => {
         if (s.panelPos && typeof s.panelPos.x === 'number') {
           applyPanelPos(panel, clamp(s.panelPos.x, 0, window.innerWidth - panel.offsetWidth), clamp(s.panelPos.y, 0, window.innerHeight - panel.offsetHeight));
         }
+        if (s.panelSize && typeof s.panelSize.w === 'number') {
+          panel.style.width = clamp(s.panelSize.w, 320, Math.max(320, window.innerWidth - 16)) + 'px';
+          panel.style.height = clamp(s.panelSize.h, 240, Math.max(240, window.innerHeight - 16)) + 'px';
+        }
+        responsivePanelBody();
         if (s.panelSrc) { panelSrc = s.panelSrc; srcSel.value = panelSrc; }
         if (s.panelTgt) { panelTgt = s.panelTgt; tgtSel.value = panelTgt; }
       }).catch(() => {});

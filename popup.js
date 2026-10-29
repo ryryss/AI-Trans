@@ -98,6 +98,8 @@ async function load() {
     if (provResp && provResp.providers) providers = provResp.providers;
   } catch (e) {}
 
+  // 先建好选项，再设置选中值——否则 value 设置不生效，会一直显示第一个服务商
+  fillProviders();
   $('provider').value = s.provider && providers.some((p) => p.id === s.provider) ? s.provider : (providers[0] ? providers[0].id : 'custom');
   onProviderChange();
 
@@ -123,12 +125,19 @@ async function load() {
 }
 
 async function saveSettings() {
+  const provId = $('provider').value;
+  const p = currentProvider();
+  const key = $('apiKey').value.trim();
+  // 需要密钥的服务商不允许空 key 保存，避免翻译时才发现
+  if (!(p && p.noKey) && !key) {
+    setStatus(t('errNoKey'), true);
+    return;
+  }
   const s = await chrome.storage.local.get(['apiKeys', 'autoSites']);
   const apiKeys = s.apiKeys || {};
   const autoSites = s.autoSites || {};
-  const provId = $('provider').value;
 
-  apiKeys[provId] = $('apiKey').value.trim();
+  apiKeys[provId] = key;
 
   const payload = {
     provider: provId,
@@ -155,7 +164,6 @@ async function saveSettings() {
   } catch (e) {}
 
   setStatus(t('saved'));
-  const p = currentProvider();
   if (p && p.id === 'deepseek') loadBalance();
 }
 
@@ -190,7 +198,7 @@ async function loadBalance() {
     const res = await chrome.runtime.sendMessage({ type: 'DS_BALANCE' });
     if (!res || !res.ok) {
       if (res && res.error === 'NA') { el.hidden = true; return; }
-      el.textContent = t('balance') + ': ' + t('balanceFailed') + (res && res.error !== 'NOKEY' ? '（' + res.error + '）' : '');
+      el.textContent = t('balance') + ': ' + t('balanceFailed') + (res && res.error ? ' (' + res.error + ')' : '');
       el.style.color = '#dc2626';
       return;
     }
@@ -199,8 +207,8 @@ async function loadBalance() {
       el.textContent = t('balance') + ': —';
       return;
     }
-    const parts = infos.map((b) => b.currency + ' ' + b.total_balance + '（+ ' + b.granted_balance + '）');
-    el.textContent = t('balance') + ': ' + parts.join('；');
+    const parts = infos.map((b) => b.currency + ' ' + b.total_balance + ' (+ ' + b.granted_balance + ')');
+    el.textContent = t('balance') + ': ' + parts.join('; ');
     el.style.color = '#16a34a';
   } catch (e) {
     el.textContent = t('balance') + ': ' + t('balanceFailed');

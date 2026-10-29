@@ -54,7 +54,17 @@ const AI_TRANS_I18N = {
     errNoModel: 'Model not set',
     errHTTP: 'API error: {s}',
     errEmpty: 'Empty response from model',
-    errBadJSON: 'Model did not return valid JSON'
+    errBadJSON: 'Model did not return valid JSON',
+    err400: 'Bad request (400) — this model may not support the request format. Try another model.',
+    err401: 'Unauthorized (401) — the API key is invalid or expired. Re-enter it in the popup and save.',
+    err402: 'Insufficient balance (402) — top up your provider account.',
+    err403: 'Forbidden (403) — this key has no access to this model, or the free quota is disabled. Check the provider console.',
+    err404: 'Not found (404) — the endpoint or model name is wrong. Check the Base URL and the exact model name, then save again.',
+    err429: 'Too many requests (429) — rate limit or daily free quota reached. Wait a while and retry (free quotas usually reset the next day).',
+    err5xx: 'Server error ({s}) — the provider is having trouble. Please retry later.',
+    errNetwork: 'Network error — cannot reach the provider. Check your connection and the Base URL.',
+    wBtnTranslate: 'T',
+    wBtnRestore: 'R'
   },
 
   'zh-CN': {
@@ -109,7 +119,17 @@ const AI_TRANS_I18N = {
     errNoModel: '未设置模型',
     errHTTP: '接口错误：{s}',
     errEmpty: '模型返回内容为空',
-    errBadJSON: '模型未返回有效 JSON'
+    errBadJSON: '模型未返回有效 JSON',
+    err400: '请求格式错误（400）— 该模型可能不支持此请求格式，换个模型试试。',
+    err401: 'API 密钥无效或已过期（401）— 请在面板里重新填写并保存。',
+    err402: '余额不足（402）— 请前往服务商平台充值。',
+    err403: '无权限（403）— 此密钥没有该模型的访问权限，或免费额度被禁用，请检查服务商控制台。',
+    err404: '找不到资源（404）— 接口地址或模型名写错了。请检查 Base URL 和模型名拼写后重新保存。',
+    err429: '请求过于频繁（429）— 触发限流或今日免费额度已用完，稍等再试（免费额度通常次日恢复）。',
+    err5xx: '服务商服务器错误（{s}）— 请稍后重试。',
+    errNetwork: '网络错误 — 无法连接到服务商。请检查网络和 Base URL。',
+    wBtnTranslate: '译',
+    wBtnRestore: '原'
   },
 
   'zh-TW': {
@@ -164,7 +184,17 @@ const AI_TRANS_I18N = {
     errNoModel: '未設定模型',
     errHTTP: '介面錯誤：{s}',
     errEmpty: '模型回傳內容為空',
-    errBadJSON: '模型未回傳有效 JSON'
+    errBadJSON: '模型未回傳有效 JSON',
+    err400: '請求格式錯誤（400）— 該模型可能不支援此請求格式，請換個模型試試。',
+    err401: 'API 金鑰無效或已過期（401）— 請在面板重新填寫並儲存。',
+    err402: '餘額不足（402）— 請前往服務商平台儲值。',
+    err403: '無權限（403）— 此金鑰沒有該模型的存取權限，或免費額度被停用，請檢查服務商控制台。',
+    err404: '找不到資源（404）— 介面位址或模型名稱錯誤。請檢查 Base URL 與模型名稱拼寫後重新儲存。',
+    err429: '請求過於頻繁（429）— 觸發限流或今日免費額度已用完，請稍後再試（免費額度通常次日恢復）。',
+    err5xx: '服務商伺服器錯誤（{s}）— 請稍後重試。',
+    errNetwork: '網路錯誤 — 無法連線到服務商。請檢查網路與 Base URL。',
+    wBtnTranslate: '譯',
+    wBtnRestore: '原'
   },
 
   ja: {
@@ -219,7 +249,17 @@ const AI_TRANS_I18N = {
     errNoModel: 'モデルが設定されていません',
     errHTTP: 'APIエラー：{s}',
     errEmpty: 'モデルからの応答が空です',
-    errBadJSON: 'モデルが有効なJSONを返しませんでした'
+    errBadJSON: 'モデルが有効なJSONを返しませんでした',
+    err400: 'リクエスト形式エラー（400）— このモデルはこの形式をサポートしていない可能性があります。別のモデルをお試しください。',
+    err401: '認証エラー（401）— APIキーが無効または期限切れです。パネルで再入力して保存してください。',
+    err402: '残高不足（402）— プロバイダーのアカウントにチャージしてください。',
+    err403: '権限なし（403）— このキーにモデルのアクセス権がないか、無料枠が無効です。プロバイダーのコンソールを確認してください。',
+    err404: '見つかりません（404）— エンドポイントまたはモデル名が間違っています。Base URLとモデル名の綴りを確認して再保存してください。',
+    err429: 'リクエスト過多（429）— レート制限または本日の無料枠を使い切りました。しばらく待って再試行してください。',
+    err5xx: 'サーバーエラー（{s}）— プロバイダー側の問題です。後ほど再試行してください。',
+    errNetwork: 'ネットワークエラー — プロバイダーに接続できません。接続とBase URLを確認してください。',
+    wBtnTranslate: '訳',
+    wBtnRestore: '原'
   },
 
   ko: {
@@ -274,7 +314,17 @@ const AI_TRANS_I18N = {
     errNoModel: '모델이 설정되지 않았습니다',
     errHTTP: 'API 오류: {s}',
     errEmpty: '모델 응답이 비어 있습니다',
-    errBadJSON: '모델이 유효한 JSON을 반환하지 않았습니다'
+    errBadJSON: '모델이 유효한 JSON을 반환하지 않았습니다',
+    err400: '잘못된 요청（400）— 이 모델이 요청 형식을 지원하지 않을 수 있습니다. 다른 모델을 사용해 보세요.',
+    err401: '인증 실패（401）— API 키가 유효하지 않거나 만료되었습니다. 패널에서 다시 입력하고 저장하세요.',
+    err402: '잔액 부족（402）— 제공사 계정을 충전하세요.',
+    err403: '권한 없음（403）— 이 키에 모델 접근 권한이 없거나 무료 할당량이 비활성화되었습니다. 제공사 콘솔을 확인하세요.',
+    err404: '찾을 수 없음（404）— 엔드포인트 또는 모델 이름이 잘못되었습니다. Base URL과 모델 이름을 확인한 뒤 다시 저장하세요.',
+    err429: '요청 과다（429）— 속도 제한 또는 오늘의 무료 할당량을 모두 사용했습니다. 잠시 후 다시 시도하세요.',
+    err5xx: '서버 오류（{s}）— 제공사 측 문제입니다. 나중에 다시 시도하세요.',
+    errNetwork: '네트워크 오류 — 제공사에 연결할 수 없습니다. 연결과 Base URL을 확인하세요.',
+    wBtnTranslate: '번',
+    wBtnRestore: '원'
   },
 
   de: {
@@ -329,7 +379,17 @@ const AI_TRANS_I18N = {
     errNoModel: 'Modell nicht festgelegt',
     errHTTP: 'API-Fehler: {s}',
     errEmpty: 'Leere Antwort vom Modell',
-    errBadJSON: 'Modell gab kein gültiges JSON zurück'
+    errBadJSON: 'Modell gab kein gültiges JSON zurück',
+    err400: 'Ungültige Anfrage (400) — dieses Modell unterstützt das Format möglicherweise nicht. Anderes Modell wählen.',
+    err401: 'Nicht autorisiert (401) — der API-Schlüssel ist ungültig oder abgelaufen. Im Popup neu eintragen und speichern.',
+    err402: 'Guthaben unzureichend (402) — Konto beim Anbieter aufladen.',
+    err403: 'Verboten (403) — dieser Schlüssel hat keinen Zugriff auf das Modell, oder das Gratiskontingent ist deaktiviert. Anbieter-Konsole prüfen.',
+    err404: 'Nicht gefunden (404) — Endpunkt oder Modellname ist falsch. Basis-URL und genauen Modellnamen prüfen und erneut speichern.',
+    err429: 'Zu viele Anfragen (429) — Ratenlimit erreicht oder Tageskontingent aufgebraucht. Kurz warten und erneut versuchen.',
+    err5xx: 'Serverfehler ({s}) — Problem beim Anbieter. Bitte später erneut versuchen.',
+    errNetwork: 'Netzwerkfehler — Anbieter nicht erreichbar. Verbindung und Basis-URL prüfen.',
+    wBtnTranslate: 'T',
+    wBtnRestore: 'R'
   },
 
   fr: {
@@ -384,7 +444,17 @@ const AI_TRANS_I18N = {
     errNoModel: 'Modèle non défini',
     errHTTP: 'Erreur API : {s}',
     errEmpty: 'Réponse vide du modèle',
-    errBadJSON: 'Le modèle n’a pas renvoyé de JSON valide'
+    errBadJSON: 'Le modèle n’a pas renvoyé de JSON valide',
+    err400: 'Requête invalide (400) — ce modèle ne prend peut-être pas en charge ce format. Essayez un autre modèle.',
+    err401: 'Non autorisé (401) — clé API invalide ou expirée. Saisissez-la à nouveau et enregistrez.',
+    err402: 'Solde insuffisant (402) — rechargez votre compte fournisseur.',
+    err403: 'Accès refusé (403) — cette clé n’a pas accès au modèle, ou le quota gratuit est désactivé. Vérifiez la console du fournisseur.',
+    err404: 'Introuvable (404) — l’endpoint ou le nom du modèle est incorrect. Vérifiez l’URL de base et le nom exact du modèle.',
+    err429: 'Trop de requêtes (429) — limite atteinte ou quota gratuit quotidien épuisé. Réessayez plus tard.',
+    err5xx: 'Erreur serveur ({s}) — problème côté fournisseur. Réessayez plus tard.',
+    errNetwork: 'Erreur réseau — impossible de joindre le fournisseur. Vérifiez la connexion et l’URL de base.',
+    wBtnTranslate: 'T',
+    wBtnRestore: 'R'
   },
 
   es: {
@@ -439,7 +509,17 @@ const AI_TRANS_I18N = {
     errNoModel: 'Modelo no definido',
     errHTTP: 'Error de API: {s}',
     errEmpty: 'Respuesta vacía del modelo',
-    errBadJSON: 'El modelo no devolvió JSON válido'
+    errBadJSON: 'El modelo no devolvió JSON válido',
+    err400: 'Solicitud incorrecta (400) — este modelo quizá no admite este formato. Prueba otro modelo.',
+    err401: 'No autorizado (401) — la clave de API no es válida o caducó. Vuelve a introducirla y guarda.',
+    err402: 'Saldo insuficiente (402) — recarga tu cuenta del proveedor.',
+    err403: 'Prohibido (403) — esta clave no tiene acceso al modelo, o el cupo gratuito está desactivado. Revisa la consola del proveedor.',
+    err404: 'No encontrado (404) — la URL base o el nombre del modelo son incorrectos. Revisa ambos y guarda de nuevo.',
+    err429: 'Demasiadas solicitudes (429) — límite de velocidad o cupo gratuito diario agotado. Espera y reintenta.',
+    err5xx: 'Error del servidor ({s}) — problema del proveedor. Reintenta más tarde.',
+    errNetwork: 'Error de red — no se puede contactar con el proveedor. Revisa la conexión y la URL base.',
+    wBtnTranslate: 'T',
+    wBtnRestore: 'R'
   },
 
   ru: {
@@ -494,7 +574,17 @@ const AI_TRANS_I18N = {
     errNoModel: 'Модель не задана',
     errHTTP: 'Ошибка API: {s}',
     errEmpty: 'Пустой ответ модели',
-    errBadJSON: 'Модель вернула некорректный JSON'
+    errBadJSON: 'Модель вернула некорректный JSON',
+    err400: 'Неверный запрос (400) — эта модель может не поддерживать такой формат. Попробуйте другую модель.',
+    err401: 'Не авторизовано (401) — API-ключ недействителен или истёк. Введите его заново и сохраните.',
+    err402: 'Недостаточно средств (402) — пополните аккаунт провайдера.',
+    err403: 'Доступ запрещён (403) — у ключа нет доступа к модели, или бесплатная квота отключена. Проверьте консоль провайдера.',
+    err404: 'Не найдено (404) — неверный адрес API или название модели. Проверьте Base URL и точное имя модели.',
+    err429: 'Слишком много запросов (429) — достигнут лимит или исчерпана дневная квота. Подождите и повторите.',
+    err5xx: 'Ошибка сервера ({s}) — проблема на стороне провайдера. Повторите позже.',
+    errNetwork: 'Ошибка сети — не удаётся связаться с провайдером. Проверьте соединение и Base URL.',
+    wBtnTranslate: 'T',
+    wBtnRestore: 'R'
   },
 
   'pt-BR': {
@@ -549,7 +639,17 @@ const AI_TRANS_I18N = {
     errNoModel: 'Modelo não definido',
     errHTTP: 'Erro de API: {s}',
     errEmpty: 'Resposta vazia do modelo',
-    errBadJSON: 'O modelo não retornou JSON válido'
+    errBadJSON: 'O modelo não retornou JSON válido',
+    err400: 'Requisição inválida (400) — este modelo pode não suportar este formato. Tente outro modelo.',
+    err401: 'Não autorizado (401) — a chave de API é inválida ou expirou. Digite-a novamente e salve.',
+    err402: 'Saldo insuficiente (402) — recarregue sua conta do provedor.',
+    err403: 'Proibido (403) — esta chave não tem acesso ao modelo, ou a cota gratuita está desativada. Verifique o console do provedor.',
+    err404: 'Não encontrado (404) — o endpoint ou o nome do modelo está errado. Verifique a URL base e o nome exato do modelo.',
+    err429: 'Muitas requisições (429) — limite de taxa ou cota gratuita diária esgotada. Aguarde e tente novamente.',
+    err5xx: 'Erro do servidor ({s}) — problema no provedor. Tente novamente mais tarde.',
+    errNetwork: 'Erro de rede — não foi possível acessar o provedor. Verifique a conexão e a URL base.',
+    wBtnTranslate: 'T',
+    wBtnRestore: 'R'
   }
 };
 

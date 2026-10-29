@@ -303,6 +303,7 @@
   // ---------- Floating widget: draggable, one click to translate / restore ----------
   let widgetSuppressClick = false;
   let widgetDrag = null;
+  let widgetButtons = { trans: null, restore: null };
 
   function clamp(v, min, max) {
     return Math.min(max, Math.max(min, v));
@@ -333,19 +334,21 @@
         'cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.25);background:' + bg + ';color:' + color + ';';
       return b;
     };
-    const btnT = mk('译', t('wTrans'), 'rgba(59,91,219,.92)', '#fff');
+    const btnT = mk(t('wBtnTranslate'), t('wTrans'), 'rgba(59,91,219,.92)', '#fff');
     btnT.addEventListener('click', () => {
       if (widgetSuppressClick) { widgetSuppressClick = false; return; }
       translatePage(document.body);
       startObserver();
     });
-    const btnR = mk('↺', t('wRestore'), 'rgba(255,255,255,.96)', '#4b5563');
+    const btnR = mk(t('wBtnRestore'), t('wRestore'), 'rgba(255,255,255,.96)', '#4b5563');
     btnR.style.border = '1px solid #e5e7eb';
     btnR.addEventListener('click', () => {
       if (widgetSuppressClick) { widgetSuppressClick = false; return; }
       restorePage();
     });
     box.append(btnT, btnR);
+    widgetButtons.trans = btnT;
+    widgetButtons.restore = btnR;
 
     // Drag (>=5px counts as drag; a plain click still fires the buttons).
     // Do NOT use setPointerCapture — it retargets the click away from the buttons.
@@ -410,7 +413,16 @@
     if (msg.type === 'DS_TRANSLATE') { translatePage(document.body); startObserver(); }
     else if (msg.type === 'DS_RESTORE') restorePage();
     else if (msg.type === 'DS_TOGGLE') { translated.size ? restorePage() : (translatePage(document.body), startObserver()); }
-    else if (msg.type === 'DS_SETTINGS') settings = Object.assign(settings, msg.settings || {});
+    else if (msg.type === 'DS_SETTINGS') {
+      settings = Object.assign(settings, msg.settings || {});
+      // 语言切换后即时更新浮动按钮文案与提示
+      if (widgetButtons.trans) {
+        widgetButtons.trans.textContent = t('wBtnTranslate');
+        widgetButtons.restore.textContent = t('wBtnRestore');
+        widgetButtons.trans.title = t('wTrans') + '\n' + t('wDrag');
+        widgetButtons.restore.title = t('wRestore') + '\n' + t('wDrag');
+      }
+    }
     sendResponse({ ok: true });
     return false;
   });

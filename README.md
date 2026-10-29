@@ -91,6 +91,7 @@ Several providers let you test AI-Trans without spending anything:
 ## ❓ FAQ
 
 - **Nothing gets translated?** Verify the API key and model; `chrome://` pages cannot be translated. Reload tabs that were open before installation.
+- **What does a 404 (or other error) mean?** Every failure is explained in plain language with a suggested fix. Common cases: 404 → wrong Base URL or model name; 401 → invalid/expired key; 402 → insufficient balance; 429 → rate limit or daily free quota reached; 5xx → provider server issue, retry later.
 - **Translation feels slow?** Use a fast non-reasoning model. DeepSeek's thinking mode is already disabled by the extension; provider-side peak hours also affect latency.
 - **Can I use a local model?** Yes — pick **Ollama (local)** or any self-hosted OpenAI-compatible endpoint.
 

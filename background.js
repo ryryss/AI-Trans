@@ -51,6 +51,28 @@ function calcDeepSeekCost(usage) {
   return (hit * DEEPSEEK_PRICES.hit[peak ? 0 : 1] + miss * DEEPSEEK_PRICES.miss[peak ? 0 : 1] + out * DEEPSEEK_PRICES.out[peak ? 0 : 1]) / 1e6;
 }
 
+// ---------- Friendly error explanations ----------
+// Raw HTTP codes mean nothing to most users — explain what happened and how to fix it.
+function explainHTTP(status, uiLang) {
+  const map = { 400: 'err400', 401: 'err401', 402: 'err402', 403: 'err403', 404: 'err404', 429: 'err429' };
+  if (map[status]) return aiTransT(uiLang, map[status]);
+  if (status >= 500) return aiTransT(uiLang, 'err5xx', { s: status });
+  return aiTransT(uiLang, 'errHTTP', { s: status });
+}
+
+function friendlyError(e, uiLang) {
+  const m = String((e && e.message) || e);
+  if (m === 'EMPTY') return aiTransT(uiLang, 'errEmpty');
+  const hm = m.match(/^HTTP (\d{3})(?:\s*·\s*)?([\s\S]*)$/);
+  if (hm) {
+    const base = explainHTTP(parseInt(hm[1], 10), uiLang);
+    const detail = (hm[2] || '').trim();
+    return detail ? base + ' · ' + detail : base;
+  }
+  if (/network|fetch|typeerror|enotfound|econnrefused|failed to fetch/i.test(m)) return aiTransT(uiLang, 'errNetwork');
+  return m;
+}
+
 async function addUsage(usage, isDeepSeek) {
   try {
     const day = beijingDateKey();
@@ -183,12 +205,16 @@ async function callAI(texts) {
   const userContent = JSON.stringify({ texts });
 
   let result;
-  if (prov && prov.type === 'anthropic') {
-    result = await callAnthropic(baseURL, apiKey, model, system, userContent);
-  } else {
-    // DeepSeek: disable the thinking mode (on by default and slow/costly for translation)
-    const extra = isDeepSeek ? { thinking: { type: 'disabled' } } : null;
-    result = await callOpenAICompatible(baseURL, apiKey, model, system, userContent, extra);
+  try {
+    if (prov && prov.type === 'anthropic') {
+      result = await callAnthropic(baseURL, apiKey, model, system, userContent);
+    } else {
+      // DeepSeek: disable the thinking mode (on by default and slow/costly for translation)
+      const extra = isDeepSeek ? { thinking: { type: 'disabled' } } : null;
+      result = await callOpenAICompatible(baseURL, apiKey, model, system, userContent, extra);
+    }
+  } catch (e) {
+    throw new Error(friendlyError(e, uiLang));
   }
 
   const translations = Array.isArray(result.obj.translations) ? result.obj.translations : [];
@@ -233,18 +259,21 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
   if (msg.type === 'DS_BALANCE') {
     // Official balance endpoint — DeepSeek only, free of charge.
-    chrome.storage.local.get(['provider', 'apiKeys']).then(async (s) => {
+    chrome.storage.local.get(['provider', 'apiKeys', 'uiLang']).then(async (s) => {
+      const uiLang = s.uiLang || aiTransDetect();
       if ((s.provider || 'deepseek') !== 'deepseek') return sendResponse({ ok: false, error: 'NA' });
       const key = (s.apiKeys && s.apiKeys.deepseek) || '';
-      if (!key) return sendResponse({ ok: false, error: 'NOKEY' });
+      if (!key) return sendResponse({ ok: false, error: aiTransT(uiLang, 'errNoKey') });
       try {
         const resp = await fetch('https://api.deepseek.com/user/balance', {
           headers: { Authorization: 'Bearer ' + key, Accept: 'application/json' }
         });
-        if (!resp.ok) return sendResponse({ ok: false, error: await apiErrorDetail(resp) });
+        if (!resp.ok) {
+          return sendResponse({ ok: false, error: friendlyError(new Error('HTTP ' + resp.status + ' · ' + await apiErrorDetail(resp)), uiLang) });
+        }
         sendResponse({ ok: true, data: await resp.json() });
       } catch (e) {
-        sendResponse({ ok: false, error: String((e && e.message) || e) });
+        sendResponse({ ok: false, error: friendlyError(e, uiLang) });
       }
     });
     return true;

@@ -1,0 +1,43 @@
+:root { color-scheme: light; }
+* { box-sizing: border-box; }
+body { width: 336px; margin: 0; font: 14px/1.6 system-ui, "Segoe UI", "Microsoft YaHei", sans-serif; color: #1f2937; background: #fff; }
+.wrap { padding: 14px; }
+
+header { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+header img { width: 32px; height: 32px; }
+.head-text .title { font-size: 16px; font-weight: 700; }
+.head-text .ver { font-size: 11px; color: #9ca3af; font-weight: 400; }
+.head-text .sub { font-size: 11px; color: #9ca3af; }
+
+label { display: block; font-size: 12px; color: #6b7280; margin: 10px 0 4px; }
+input[type=password], input[type=text], select {
+  width: 100%; padding: 7px 9px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; background: #fff;
+}
+input:focus, select:focus { outline: 2px solid #93b4ff; outline-offset: 0; border-color: #3b5bdb; }
+
+.label-row { display: flex; align-items: baseline; justify-content: space-between; }
+.label-row a { font-size: 12px; color: #3b5bdb; text-decoration: none; }
+.label-row a:hover { text-decoration: underline; }
+
+button { cursor: pointer; border: 0; border-radius: 8px; padding: 8px 12px; font-size: 13px; font-family: inherit; }
+.btn-primary { background: #3b5bdb; color: #fff; width: 100%; margin-top: 12px; }
+.btn-primary:hover { background: #364fc7; }
+.btn-line { background: #eef2ff; color: #3b5bdb; width: 100%; margin-top: 8px; }
+.btn-line:hover { background: #e0e7ff; }
+
+.checks { margin-top: 10px; font-size: 13px; }
+.checks label { display: flex; align-items: center; gap: 6px; margin: 4px 0; color: #374151; cursor: pointer; }
+
+#status { margin-top: 10px; font-size: 12px; color: #6b7280; min-height: 16px; word-break: break-all; }
+
+.stats { margin-top: 12px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 10px; font-size: 12px; }
+.stats-head { display: flex; justify-content: space-between; align-items: center; font-weight: 600; margin-bottom: 4px; }
+.btn-mini { background: none; color: #9ca3af; font-size: 12px; padding: 0; }
+.btn-mini:hover { color: #dc2626; }
+#statTotal, #statToday, #statBalance { color: #4b5563; }
+#statBalance { margin-top: 4px; }
+.stats-note { color: #b0b7c3; margin-top: 4px; font-size: 11px; }
+
+.foot { margin-top: 10px; font-size: 12px; text-align: center; }
+.foot a { color: #3b5bdb; text-decoration: none; }
+.foot a:hover { text-decoration: underline; }

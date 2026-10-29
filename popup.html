@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="popup.css">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img src="icons/icon48.png" alt="AI-Trans">
+    <div class="head-text">
+      <div class="title">AI-Trans <span class="ver">v1.0.0</span></div>
+      <div class="sub" data-i18n="shortAlt"></div>
+    </div>
+  </header>
+
+  <label data-i18n="uiLanguage"></label>
+  <select id="uiLang">
+    <option value="en">English</option>
+    <option value="zh-CN">简体中文</option>
+    <option value="zh-TW">繁體中文</option>
+    <option value="ja">日本語</option>
+    <option value="ko">한국어</option>
+    <option value="de">Deutsch</option>
+    <option value="fr">Français</option>
+    <option value="es">Español</option>
+    <option value="ru">Русский</option>
+    <option value="pt-BR">Português (BR)</option>
+  </select>
+
+  <label data-i18n="provider"></label>
+  <select id="provider"></select>
+
+  <div class="label-row">
+    <label data-i18n="apiKey"></label>
+    <a id="keyUrl" href="#" target="_blank" data-i18n="getKey"></a>
+  </div>
+  <input type="password" id="apiKey" data-i18n-ph="apiKeyPh" autocomplete="off" spellcheck="false">
+
+  <label data-i18n="model"></label>
+  <input type="text" id="model" list="modelList" autocomplete="off" spellcheck="false">
+  <datalist id="modelList"></datalist>
+
+  <div id="customRow" hidden>
+    <label data-i18n="baseURL"></label>
+    <input type="text" id="baseURL" data-i18n-ph="baseURLPh" autocomplete="off" spellcheck="false">
+  </div>
+
+  <label data-i18n="targetLang"></label>
+  <select id="targetLang">
+    <option value="zh-CN">简体中文 / Simplified Chinese</option>
+    <option value="zh-TW">繁體中文 / Traditional Chinese</option>
+    <option value="en">English</option>
+    <option value="ja">日本語</option>
+    <option value="ko">한국어</option>
+    <option value="de">Deutsch</option>
+    <option value="fr">Français</option>
+    <option value="es">Español</option>
+    <option value="pt">Português</option>
+    <option value="ru">Русский</option>
+    <option value="it">Italiano</option>
+    <option value="ar">العربية</option>
+    <option value="hi">हिन्दी</option>
+    <option value="th">ไทย</option>
+    <option value="vi">Tiếng Việt</option>
+    <option value="nl">Nederlands</option>
+    <option value="pl">Polski</option>
+    <option value="tr">Türkçe</option>
+    <option value="id">Bahasa Indonesia</option>
+  </select>
+
+  <button class="btn-primary" id="save" data-i18n="save"></button>
+
+  <div class="checks">
+    <label id="autoSiteLabel"><input type="checkbox" id="autoSite"> <span data-i18n="autoSite"></span></label>
+    <label><input type="checkbox" id="autoGlobal"> <span data-i18n="autoGlobal"></span></label>
+  </div>
+
+  <button class="btn-primary" id="translate" data-i18n="translateBtn"></button>
+  <button class="btn-line" id="restore" data-i18n="restoreBtn"></button>
+
+  <div id="status"></div>
+
+  <div class="stats">
+    <div class="stats-head">
+      <span data-i18n="statsTitle"></span>
+      <button id="clearStats" class="btn-mini" data-i18n="clear"></button>
+    </div>
+    <div id="statTotal"></div>
+    <div id="statToday"></div>
+    <div id="statBalance" hidden></div>
+    <div class="stats-note" data-i18n="statsNote"></div>
+  </div>
+
+  <div class="foot">
+    <a id="githubLink" href="https://github.com/" target="_blank" data-i18n="github"></a>
+  </div>
+</div>
+<script src="i18n.js"></script>
+<script src="popup.js"></script>
+</body>
+</html>

@@ -74,6 +74,8 @@ const AI_TRANS_I18N = {
     fetchModels: 'Fetch model list',
     fetchedModels: 'Loaded {n} models',
     modelFetchFail: 'Model list failed: {e}',
+    errNoConn: 'Cannot reach the extension background (it may have just been updated). Reload this page and try again.',
+    errUnknown: 'Unexpected error: {e}',
     wBtnTranslate: 'T',
     wBtnRestore: 'R'
   },
@@ -150,6 +152,8 @@ const AI_TRANS_I18N = {
     fetchModels: '获取模型列表',
     fetchedModels: '已获取 {n} 个模型',
     modelFetchFail: '获取模型列表失败：{e}',
+    errNoConn: '无法连接扩展后台（可能刚更新过插件）。请刷新本页面后重试。',
+    errUnknown: '未知错误：{e}',
     wBtnTranslate: '译',
     wBtnRestore: '原'
   },
@@ -226,6 +230,8 @@ const AI_TRANS_I18N = {
     fetchModels: '取得模型清單',
     fetchedModels: '已取得 {n} 個模型',
     modelFetchFail: '取得模型清單失敗：{e}',
+    errNoConn: '無法連線到擴充功能背景（可能剛更新過擴充功能）。請重新整理本頁面後再試。',
+    errUnknown: '未知錯誤：{e}',
     wBtnTranslate: '譯',
     wBtnRestore: '原'
   },
@@ -302,6 +308,8 @@ const AI_TRANS_I18N = {
     fetchModels: 'モデル一覧を取得',
     fetchedModels: '{n} 個のモデルを取得しました',
     modelFetchFail: 'モデル一覧の取得に失敗：{e}',
+    errNoConn: '拡張機能のバックグラウンドに接続できません（更新直後かもしれません）。このページを再読み込みしてもう一度お試しください。',
+    errUnknown: '予期しないエラー：{e}',
     wBtnTranslate: '訳',
     wBtnRestore: '原'
   },
@@ -378,6 +386,8 @@ const AI_TRANS_I18N = {
     fetchModels: '모델 목록 가져오기',
     fetchedModels: '{n}개 모델 로드됨',
     modelFetchFail: '모델 목록 실패: {e}',
+    errNoConn: '확장 프로그램 백그라운드에 연결할 수 없습니다（방금 업데이트되었을 수 있음）. 이 페이지를 새로고침한 뒤 다시 시도하세요.',
+    errUnknown: '알 수 없는 오류: {e}',
     wBtnTranslate: '번',
     wBtnRestore: '원'
   },
@@ -454,6 +464,8 @@ const AI_TRANS_I18N = {
     fetchModels: 'Modellliste abrufen',
     fetchedModels: '{n} Modelle geladen',
     modelFetchFail: 'Modellliste fehlgeschlagen: {e}',
+    errNoConn: 'Der Erweiterungshintergrund ist nicht erreichbar (möglicherweise gerade aktualisiert). Bitte Seite neu laden und erneut versuchen.',
+    errUnknown: 'Unerwarteter Fehler: {e}',
     wBtnTranslate: 'T',
     wBtnRestore: 'R'
   },
@@ -530,6 +542,8 @@ const AI_TRANS_I18N = {
     fetchModels: 'Récupérer les modèles',
     fetchedModels: '{n} modèles chargés',
     modelFetchFail: 'Échec de la liste : {e}',
+    errNoConn: 'Impossible de joindre l’arrière-plan de l’extension (mise à jour récente ?). Rechargez la page et réessayez.',
+    errUnknown: 'Erreur inattendue : {e}',
     wBtnTranslate: 'T',
     wBtnRestore: 'R'
   },
@@ -606,6 +620,8 @@ const AI_TRANS_I18N = {
     fetchModels: 'Obtener modelos',
     fetchedModels: '{n} modelos cargados',
     modelFetchFail: 'Fallo al obtener modelos: {e}',
+    errNoConn: 'No se puede contactar con el proceso en segundo plano de la extensión (quizá se acaba de actualizar). Recarga la página e inténtalo de nuevo.',
+    errUnknown: 'Error inesperado: {e}',
     wBtnTranslate: 'T',
     wBtnRestore: 'R'
   },
@@ -682,6 +698,8 @@ const AI_TRANS_I18N = {
     fetchModels: 'Получить список моделей',
     fetchedModels: 'Загружено моделей: {n}',
     modelFetchFail: 'Не удалось получить список: {e}',
+    errNoConn: 'Не удаётся связаться с фоновым процессом расширения (возможно, оно только что обновилось). Перезагрузите страницу и попробуйте снова.',
+    errUnknown: 'Непредвиденная ошибка: {e}',
     wBtnTranslate: 'T',
     wBtnRestore: 'R'
   },
@@ -758,6 +776,8 @@ const AI_TRANS_I18N = {
     fetchModels: 'Buscar modelos',
     fetchedModels: '{n} modelos carregados',
     modelFetchFail: 'Falha ao buscar modelos: {e}',
+    errNoConn: 'Não foi possível acessar o plano de fundo da extensão (ela pode ter acabado de ser atualizada). Recarregue a página e tente novamente.',
+    errUnknown: 'Erro inesperado: {e}',
     wBtnTranslate: 'T',
     wBtnRestore: 'R'
   }
@@ -826,4 +846,31 @@ function aiTransT(lang, key, vars) {
     for (const k in vars) s = s.split('{' + k + '}').join(vars[k]);
   }
   return s;
+}
+
+// 把后台返回的错误码渲染成本地化文案（显示方用自己的界面语言调用）
+function aiTransErrText(lang, code, detail) {
+  const staticMap = {
+    NO_KEY: 'errNoKey',
+    NO_MODEL: 'errNoModel',
+    EMPTY: 'errEmpty',
+    BADJSON: 'errBadJSON',
+    TIMEOUT: 'errTimeout',
+    NETWORK: 'errNetwork',
+    OLLAMA: 'errOllama',
+    UNKNOWN: 'errUnknown'
+  };
+  let key = staticMap[code];
+  let vars = null;
+  if (!key && code && code.indexOf('HTTP_') === 0) {
+    const st = parseInt(code.slice(5), 10);
+    const hm = { 400: 'err400', 401: 'err401', 402: 'err402', 403: 'err403', 404: 'err404', 429: 'err429' };
+    key = hm[st] || (st >= 500 ? 'err5xx' : 'errHTTP');
+    if (key === 'err5xx' || key === 'errHTTP') vars = { s: st };
+  }
+  if (!key) key = 'errUnknown';
+  let text = vars ? aiTransT(lang, key, vars) : aiTransT(lang, key);
+  if (code === 'UNKNOWN' && detail) text = aiTransT(lang, 'errUnknown', { e: detail });
+  else if (detail && detail.trim()) text += ' · ' + detail.trim();
+  return text;
 }

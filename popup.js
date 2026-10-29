@@ -203,8 +203,9 @@ async function loadBalance() {
   try {
     const res = await chrome.runtime.sendMessage({ type: 'DS_BALANCE' });
     if (!res || !res.ok) {
-      if (res && res.error === 'NA') { el.hidden = true; return; }
-      el.textContent = t('balance') + ': ' + t('balanceFailed') + (res && res.error ? ' (' + res.error + ')' : '');
+      if (res && res.code === 'NA') { el.hidden = true; return; }
+      const msg = (res && res.code) ? aiTransErrText(uiLang, res.code, res.detail) : t('balanceFailed');
+      el.textContent = t('balance') + ': ' + msg;
       el.style.color = '#dc2626';
       return;
     }
@@ -276,7 +277,7 @@ $('testConn').addEventListener('click', async () => {
     };
     const res = await chrome.runtime.sendMessage({ type: 'DS_TEST', config });
     if (res && res.ok) setStatus(t('connOK', { ms: res.latency }));
-    else setStatus(t('connFail', { e: (res && res.error) || '' }), true);
+    else setStatus(t('connFail', { e: (res && res.code) ? aiTransErrText(uiLang, res.code, res.detail) : '' }), true);
   } catch (e) {
     setStatus(t('connFail', { e: String((e && e.message) || e) }), true);
   }
@@ -299,7 +300,7 @@ $('fetchModels').addEventListener('click', async (ev) => {
     };
     const res = await chrome.runtime.sendMessage({ type: 'DS_MODELS', config });
     if (!res || !res.ok) {
-      setStatus(t('modelFetchFail', { e: (res && res.error) || '' }), true);
+      setStatus(t('modelFetchFail', { e: (res && res.code) ? aiTransErrText(uiLang, res.code, res.detail) : '' }), true);
       return;
     }
     const models = res.models || [];

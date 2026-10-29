@@ -51,28 +51,21 @@ function calcDeepSeekCost(usage) {
   return (hit * DEEPSEEK_PRICES.hit[peak ? 0 : 1] + miss * DEEPSEEK_PRICES.miss[peak ? 0 : 1] + out * DEEPSEEK_PRICES.out[peak ? 0 : 1]) / 1e6;
 }
 
-// ---------- Friendly error explanations ----------
-// Raw HTTP codes mean nothing to most users — explain what happened and how to fix it.
-function explainHTTP(status, uiLang) {
-  const map = { 400: 'err400', 401: 'err401', 402: 'err402', 403: 'err403', 404: 'err404', 429: 'err429' };
-  if (map[status]) return aiTransT(uiLang, map[status]);
-  if (status >= 500) return aiTransT(uiLang, 'err5xx', { s: status });
-  return aiTransT(uiLang, 'errHTTP', { s: status });
-}
-
-function friendlyError(e, uiLang) {
+// ---------- Structured error codes ----------
+// The background returns machine-readable codes; the UI (page toast / popup) renders
+// localized explanations in ITS OWN language via aiTransErrText(). This guarantees the
+// error language always matches the user's chosen UI language.
+function errorToCode(e) {
   const m = String((e && e.message) || e);
-  if (m === 'EMPTY') return aiTransT(uiLang, 'errEmpty');
-  if (m === 'BADJSON') return aiTransT(uiLang, 'errBadJSON');
-  if (/timeout|abort/i.test(m)) return aiTransT(uiLang, 'errTimeout');
+  const cm = m.match(/^AI_T#([A-Z0-9_]+)#([\s\S]*)$/);
+  if (cm) return { code: cm[1], detail: (cm[2] || '').trim() };
+  if (m === 'EMPTY') return { code: 'EMPTY', detail: '' };
+  if (m === 'BADJSON') return { code: 'BADJSON', detail: '' };
   const hm = m.match(/^HTTP (\d{3})(?:\s*·\s*)?([\s\S]*)$/);
-  if (hm) {
-    const base = explainHTTP(parseInt(hm[1], 10), uiLang);
-    const detail = (hm[2] || '').trim();
-    return detail ? base + ' · ' + detail : base;
-  }
-  if (/network|fetch|typeerror|enotfound|econnrefused|failed to fetch/i.test(m)) return aiTransT(uiLang, 'errNetwork');
-  return m;
+  if (hm) return { code: 'HTTP_' + hm[1], detail: (hm[2] || '').trim() };
+  if (/timeout|abort/i.test(m)) return { code: 'TIMEOUT', detail: '' };
+  if (/network|fetch|typeerror|enotfound|econnrefused|failed to fetch/i.test(m)) return { code: 'NETWORK', detail: '' };
+  return { code: 'UNKNOWN', detail: m };
 }
 
 async function addUsage(usage, isDeepSeek) {
@@ -208,9 +201,9 @@ async function callAI(texts) {
   const cfg = resolveConfig(s);
   const { prov, baseURL, model, apiKey, isDeepSeek, uiLang, targetName } = cfg;
 
-  if (!baseURL) throw new Error(aiTransT(uiLang, 'errNoModel'));
-  if (!apiKey && !(prov && prov.noKey)) throw new Error(aiTransT(uiLang, 'errNoKey'));
-  if (!model) throw new Error(aiTransT(uiLang, 'errNoModel'));
+  if (!baseURL) throw new Error('AI_T#NO_MODEL#');
+  if (!apiKey && !(prov && prov.noKey)) throw new Error('AI_T#NO_KEY#');
+  if (!model) throw new Error('AI_T#NO_MODEL#');
 
   const system = buildSystemPrompt(targetName);
   const userContent = JSON.stringify({ texts });
@@ -225,12 +218,15 @@ async function callAI(texts) {
       result = await callOpenAICompatible(baseURL, apiKey, model, system, userContent, extra);
     }
   } catch (e) {
-    let msg = friendlyError(e, uiLang);
-    if (/localhost|127\.0\.0\.1/.test(baseURL || '')) msg += ' · ' + aiTransT(uiLang, 'errOllama');
-    throw new Error(msg);
+    const err = errorToCode(e);
+    // 本地 Ollama 连不上时给专门提示
+    if (/localhost|127\.0\.0\.1/.test(baseURL || '') && (err.code === 'NETWORK' || err.code === 'TIMEOUT')) {
+      throw new Error('AI_T#OLLAMA#');
+    }
+    throw new Error('AI_T#' + err.code + '#' + err.detail);
   }
 
-  if (!Array.isArray(result.obj.translations)) throw new Error(aiTransT(uiLang, 'errBadJSON'));
+  if (!Array.isArray(result.obj.translations)) throw new Error('AI_T#BADJSON#');
   const translations = result.obj.translations.slice();
   while (translations.length < texts.length) translations.push(null); // 缺失项置 null，内容脚本会保留原文
   return { translations, usage: result.usage, isDeepSeek, cost: isDeepSeek ? calcDeepSeekCost(result.usage) : 0 };
@@ -254,11 +250,13 @@ async function testConnection(config) {
     const resp = await fetch(url, { headers, signal: AbortSignal.timeout(15000) });
     const latency = Date.now() - t0;
     if (!resp.ok) {
-      return { ok: false, latency, error: friendlyError(new Error('HTTP ' + resp.status + ' · ' + await apiErrorDetail(resp)), uiLang) };
+      const err = errorToCode(new Error('HTTP ' + resp.status + ' · ' + await apiErrorDetail(resp)));
+      return { ok: false, latency, code: err.code, detail: err.detail };
     }
     return { ok: true, latency };
   } catch (e) {
-    return { ok: false, latency: Date.now() - t0, error: friendlyError(e, uiLang) };
+    const err = errorToCode(e);
+    return { ok: false, latency: Date.now() - t0, code: err.code, detail: err.detail };
   }
 }
 
@@ -273,9 +271,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         sendResponse({ ok: true, translations, usage, cost });
       })
       .catch((e) => {
-        const m = String((e && e.message) || e);
-        const detail = m === 'EMPTY' ? aiTransT(aiTransDetect(), 'errEmpty') : m;
-        sendResponse({ ok: false, error: detail });
+        const { code, detail } = errorToCode(e);
+        sendResponse({ ok: false, code, detail });
       });
     return true;
   }
@@ -319,13 +316,15 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       try {
         const resp = await fetch(url, { headers, signal: AbortSignal.timeout(15000) });
         if (!resp.ok) {
-          return sendResponse({ ok: false, error: friendlyError(new Error('HTTP ' + resp.status + ' · ' + await apiErrorDetail(resp)), uiLang) });
+          const err = errorToCode(new Error('HTTP ' + resp.status + ' · ' + await apiErrorDetail(resp)));
+          return sendResponse({ ok: false, code: err.code, detail: err.detail });
         }
         const data = await resp.json();
         const list = (data.data || []).map((m) => m && m.id).filter(Boolean);
         sendResponse({ ok: true, models: list });
       } catch (e) {
-        sendResponse({ ok: false, error: friendlyError(e, uiLang) });
+        const err = errorToCode(e);
+        sendResponse({ ok: false, code: err.code, detail: err.detail });
       }
     })();
     return true;
@@ -333,21 +332,22 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
   if (msg.type === 'DS_BALANCE') {
     // Official balance endpoint — DeepSeek only, free of charge.
-    chrome.storage.local.get(['provider', 'apiKeys', 'uiLang']).then(async (s) => {
-      const uiLang = s.uiLang || aiTransDetect();
-      if ((s.provider || 'deepseek') !== 'deepseek') return sendResponse({ ok: false, error: 'NA' });
+    chrome.storage.local.get(['provider', 'apiKeys']).then(async (s) => {
+      if ((s.provider || 'deepseek') !== 'deepseek') return sendResponse({ ok: false, code: 'NA', detail: '' });
       const key = (s.apiKeys && s.apiKeys.deepseek) || '';
-      if (!key) return sendResponse({ ok: false, error: aiTransT(uiLang, 'errNoKey') });
+      if (!key) return sendResponse({ ok: false, code: 'NO_KEY', detail: '' });
       try {
         const resp = await fetch('https://api.deepseek.com/user/balance', {
           headers: { Authorization: 'Bearer ' + key, Accept: 'application/json' }
         });
         if (!resp.ok) {
-          return sendResponse({ ok: false, error: friendlyError(new Error('HTTP ' + resp.status + ' · ' + await apiErrorDetail(resp)), uiLang) });
+          const err = errorToCode(new Error('HTTP ' + resp.status + ' · ' + await apiErrorDetail(resp)));
+          return sendResponse({ ok: false, code: err.code, detail: err.detail });
         }
         sendResponse({ ok: true, data: await resp.json() });
       } catch (e) {
-        sendResponse({ ok: false, error: friendlyError(e, uiLang) });
+        const err = errorToCode(e);
+        sendResponse({ ok: false, code: err.code, detail: err.detail });
       }
     });
     return true;

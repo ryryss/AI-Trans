@@ -224,7 +224,11 @@
         });
         if (!res || !res.ok) {
           failed = true;
-          if (!firstError) firstError = (res && res.error) || t('tError', { e: '' });
+          if (!firstError) {
+            firstError = (res && res.code)
+              ? aiTransErrText(settings.uiLang, res.code, res.detail)
+              : t('errUnknown', { e: '' });
+          }
           return;
         }
         if (res.usage) {
@@ -252,7 +256,10 @@
       });
     } catch (e) {
       failed = true;
-      firstError = (e && e.message) || String(e);
+      // Chrome 内部报错（如扩展刚更新、消息通道断开）是英文的，这里统一转成本地化提示
+      const m = String((e && e.message) || e);
+      if (/could not establish|receiving end|port closed|extension context/i.test(m)) firstError = t('errNoConn');
+      else firstError = m;
     } finally {
       isRunning = false;
       if (failed) toast(t('tError', { e: firstError }), true);

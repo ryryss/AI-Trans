@@ -330,6 +330,17 @@
     return Math.min(max, Math.max(min, v));
   }
 
+  // 拖动期间锁定页面文本选择，并阻止浏览器原生拖拽（否则会出现"虚影"且面板不跟手）
+  function dragLockStart(e) {
+    if (e.pointerType === 'mouse') e.preventDefault();
+    try { window.getSelection().removeAllRanges(); } catch (err) {}
+    document.documentElement.style.userSelect = 'none';
+  }
+
+  function dragLockEnd() {
+    document.documentElement.style.userSelect = '';
+  }
+
   function applyWidgetPos(box, x, y) {
     box.style.left = x + 'px';
     box.style.top = y + 'px';
@@ -382,6 +393,7 @@
     // Do NOT use setPointerCapture — it retargets the click away from the buttons.
     box.addEventListener('pointerdown', (e) => {
       if (e.button !== 0 && e.pointerType === 'mouse') return;
+      if (e.pointerType === 'mouse') e.preventDefault(); // 阻止原生拖拽（防止虚影）
       const rect = box.getBoundingClientRect();
       widgetDrag = { sx: e.clientX, sy: e.clientY, ox: rect.left, oy: rect.top, moved: false };
       const onMove = (ev) => {
@@ -390,6 +402,9 @@
         const dy = ev.clientY - widgetDrag.sy;
         if (!widgetDrag.moved && Math.hypot(dx, dy) > 5) {
           widgetDrag.moved = true;
+          if (ev.pointerType === 'mouse') ev.preventDefault();
+          try { window.getSelection().removeAllRanges(); } catch (err) {}
+          document.documentElement.style.userSelect = 'none';
           box.style.transition = 'none';
         }
         if (widgetDrag.moved) {
@@ -404,6 +419,7 @@
         if (!widgetDrag) return;
         const moved = widgetDrag.moved;
         const rect2 = box.getBoundingClientRect();
+        document.documentElement.style.userSelect = '';
         if (moved) {
           widgetSuppressClick = true;
           setTimeout(() => { widgetSuppressClick = false; }, 0);
@@ -619,7 +635,7 @@
       'position:fixed;right:70px;bottom:16px;z-index:2147483646;width:560px;height:380px;max-width:calc(100vw - 32px);' +
       'background:#fff;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.28);' +
       'font:13px/1.5 system-ui,"Segoe UI",sans-serif;color:#1f2937;overflow:hidden;' +
-      'display:flex;flex-direction:column;';
+      'display:flex;flex-direction:column;user-select:none;';
 
     const header = document.createElement('div');
     header.style.cssText =
@@ -689,17 +705,20 @@
     handle.addEventListener('pointerdown', (e) => {
       e.stopPropagation();
       if (e.button !== 0 && e.pointerType === 'mouse') return;
+      dragLockStart(e);
       const sw = panel.offsetWidth;
       const sh = panel.offsetHeight;
       const sx = e.clientX;
       const sy = e.clientY;
       const rect = panel.getBoundingClientRect();
       const onMove = (ev) => {
+        if (ev.pointerType === 'mouse') ev.preventDefault();
         panel.style.width = clamp(sw + ev.clientX - sx, 320, Math.max(320, window.innerWidth - rect.left - 8)) + 'px';
         panel.style.height = clamp(sh + ev.clientY - sy, 240, Math.max(240, window.innerHeight - rect.top - 8)) + 'px';
         responsivePanelBody();
       };
       const onUp = () => {
+        dragLockEnd();
         try {
           chrome.storage.local.set({ panelSize: { w: panel.offsetWidth, h: panel.offsetHeight } }).catch(() => {});
         } catch (err) {}
@@ -725,10 +744,12 @@
     // 拖动：按住标题栏移动
     header.addEventListener('pointerdown', (e) => {
       if (e.button !== 0 && e.pointerType === 'mouse') return;
+      dragLockStart(e);
       const rect = panel.getBoundingClientRect();
       panelDrag = { sx: e.clientX, sy: e.clientY, ox: rect.left, oy: rect.top };
       const onMove = (ev) => {
         if (!panelDrag) return;
+        if (ev.pointerType === 'mouse') ev.preventDefault();
         applyPanelPos(
           panel,
           clamp(panelDrag.ox + ev.clientX - panelDrag.sx, 0, window.innerWidth - panel.offsetWidth),
@@ -738,6 +759,7 @@
       const onUp = () => {
         if (!panelDrag) return;
         panelDrag = null;
+        dragLockEnd();
         const r = panel.getBoundingClientRect();
         try {
           chrome.storage.local.set({ panelPos: { x: Math.round(r.left), y: Math.round(r.top) } }).catch(() => {});

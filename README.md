@@ -21,6 +21,7 @@ AI-Trans is a minimalist Chrome extension that translates entire web pages with 
 - **Self-hosted & niche endpoints** — any OpenAI-compatible service works by entering your own base URL + API key + model name
 - **Smart dynamic content** — games, live feeds, infinite scroll: newly rendered or rewritten text is translated automatically while you browse
 - **Draggable floating buttons** — one tap to translate, one tap to restore; the position is remembered
+- **Text translation panel** — a floating input box (Google-Translate style): type anything, auto-detect the source language, swap languages with one click
 - **Local translation cache** — translated sentences are cached in your browser (max 20,000 entries / ~2M characters with LRU auto-eviction), so revisiting a page is instant and costs nothing
 - **Usage & balance display** — request count, input/output tokens, estimated cost where official pricing is available (DeepSeek), and your real DeepSeek balance via the official API
 - **Built-in diagnostics** — one-click connection test, fetch-the-model-list (kills 404s), and every error explained in plain language with a suggested fix
@@ -70,6 +71,13 @@ AI-Trans is a minimalist Chrome extension that translates entire web pages with 
 
 ### Floating widget
 - Draggable: hold it and move it anywhere; the position is remembered across pages.
+
+### Text translation panel
+- Click the pencil (✎) floating button to open a translation box, Google-Translate style.
+- Left side: your text — translation starts automatically as you type (0.8s debounce).
+- Right side: the translation (read-only).
+- Top bar: source language (defaults to **Auto detect**, the detected language is shown after translating) ⇄ **swap** button, and the target language (defaults to your browser language).
+- The window is draggable by its title bar, its position and language choices are remembered. Click × to close.
 
 ### Statistics & balance
 - The popup shows **today's** and **all-time** request count and input/output tokens, counted locally.

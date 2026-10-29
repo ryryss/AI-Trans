@@ -19,6 +19,7 @@ Features:
 - Bring your own API key — DeepSeek, OpenAI, Google Gemini, Anthropic Claude, OpenRouter, Moonshot Kimi, Zhipu GLM, Alibaba Qwen, Groq, SiliconFlow, local Ollama, or any custom OpenAI-compatible endpoint
 - Dynamic content translation — games, live feeds and infinite scroll keep translating automatically
 - Draggable floating translate/restore buttons (position remembered)
+- Built-in text translation panel (Google-Translate style, auto language detection and swap)
 - Local translation cache — revisited pages translate instantly and cost nothing
 - Usage statistics — requests, input/output tokens, estimated cost, and your real DeepSeek balance via the official API
 - One-click connection test and model-list fetching — never guess a model name again
@@ -37,6 +38,7 @@ AI-Trans 是一款极简、开源的 AI 翻译扩展。它把整个网页**原�
 - 自带 API Key：DeepSeek、OpenAI、Google Gemini、Claude、OpenRouter、Kimi、智谱、通义千问、Groq、SiliconFlow、本地 Ollama，或任意 OpenAI 兼容接口
 - 动态内容自动翻译：游戏、直播、无限滚动持续跟进
 - 可拖动的浮动翻译/还原按钮（位置记忆）
+- 内置文本翻译面板（类似谷歌翻译，自动检测语言、一键互换）
 - 本地翻译缓存：翻过的页面秒开、零花费
 - 用量统计：请求次数、tokens、预估费用、DeepSeek 官方余额
 - 一键测试连接、一键拉取模型列表，告别 404

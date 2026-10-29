@@ -19,6 +19,7 @@
 
   const TOAST_ID = 'ai-trans-toast';
   const WIDGET_ID = 'ai-trans-widget';
+  const PANEL_ID = 'ai-trans-panel';
   const CONCURRENCY = 5;   // parallel API requests
   const CACHE_KEY = 'transCacheV1';
   const CACHE_CAP = 20000;          // 缓存条目数上限
@@ -63,7 +64,7 @@
 
   function shouldSkip(parent) {
     if (SKIP_TAGS.has(parent.tagName)) return true;
-    if (parent.closest('#' + TOAST_ID + ', #' + WIDGET_ID)) return true;
+    if (parent.closest('#' + TOAST_ID + ', #' + WIDGET_ID + ', #' + PANEL_ID)) return true;
     if (parent.isContentEditable) return true;
     if (parent.closest('[translate="no"],[contenteditable="true"],[contenteditable="plaintext-only"]')) return true;
     let visible;
@@ -323,7 +324,7 @@
   // ---------- Floating widget: draggable, one click to translate / restore ----------
   let widgetSuppressClick = false;
   let widgetDrag = null;
-  let widgetButtons = { trans: null, restore: null };
+  let widgetButtons = { trans: null, panel: null, restore: null };
 
   function clamp(v, min, max) {
     return Math.min(max, Math.max(min, v));
@@ -366,8 +367,15 @@
       if (widgetSuppressClick) { widgetSuppressClick = false; return; }
       restorePage();
     });
-    box.append(btnT, btnR);
+    const btnP = mk('✎', t('wPanelTitle'), 'rgba(255,255,255,.96)', '#4b5563');
+    btnP.style.border = '1px solid #e5e7eb';
+    btnP.addEventListener('click', () => {
+      if (widgetSuppressClick) { widgetSuppressClick = false; return; }
+      togglePanel();
+    });
+    box.append(btnT, btnP, btnR);
     widgetButtons.trans = btnT;
+    widgetButtons.panel = btnP;
     widgetButtons.restore = btnR;
 
     // Drag (>=5px counts as drag; a plain click still fires the buttons).
@@ -427,6 +435,215 @@
     } catch (err) {}
   }
 
+  // ---------- 文本翻译面板（谷歌翻译风格：左原文右译文、自动检测、互换语言） ----------
+  let panel = null;
+  let panelDrag = null;
+  let panelTimer = null;
+  let panelSrc = ''; // 'auto' 或语言码
+  let panelTgt = '';
+
+  function panelTargetDefault() {
+    return settings.targetLang || aiTransDefaultTarget(settings.uiLang);
+  }
+
+  function applyPanelPos(el, x, y) {
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+    el.style.right = 'auto';
+    el.style.bottom = 'auto';
+  }
+
+  function fillPanelLangs(sel, auto) {
+    sel.innerHTML = '';
+    if (auto) {
+      const o = document.createElement('option');
+      o.value = 'auto';
+      o.textContent = t('panelAuto');
+      sel.appendChild(o);
+    }
+    for (const code in AI_TRANS_TARGETS) {
+      const o = document.createElement('option');
+      o.value = code;
+      o.textContent = AI_TRANS_TARGETS[code];
+      sel.appendChild(o);
+    }
+    sel.value = auto ? (panelSrc || 'auto') : (panelTgt || panelTargetDefault());
+  }
+
+  function persistPanelLangs() {
+    if (!panel) return;
+    panelSrc = panel._els.srcSel.value;
+    panelTgt = panel._els.tgtSel.value;
+    chrome.storage.local.set({ panelSrc, panelTgt }).catch(() => {});
+  }
+
+  function swapLangs() {
+    if (!panel) return;
+    const els = panel._els;
+    const src = els.srcSel.value;
+    const tgt = els.tgtSel.value;
+    if (src === 'auto') {
+      els.srcSel.value = tgt;
+      els.tgtSel.value = panelTargetDefault();
+    } else {
+      els.srcSel.value = tgt;
+      els.tgtSel.value = src;
+    }
+    persistPanelLangs();
+    panelTranslate();
+  }
+
+  async function panelTranslate() {
+    if (!panel) return;
+    const els = panel._els;
+    const text = els.srcArea.value.trim();
+    if (!text) { els.tgtArea.value = ''; els.hint.textContent = ''; return; }
+    els.hint.textContent = '…';
+    const src = els.srcSel.value;
+    const tgt = els.tgtSel.value;
+    try {
+      const res = await chrome.runtime.sendMessage({
+        type: 'DS_API',
+        texts: [text],
+        targetCode: tgt,
+        detect: src === 'auto'
+      });
+      if (!res || !res.ok) {
+        els.hint.textContent = (res && res.code) ? aiTransErrText(settings.uiLang, res.code, res.detail) : '?';
+        return;
+      }
+      const tr = res.translations && res.translations[0];
+      els.tgtArea.value = typeof tr === 'string' ? tr : '';
+      els.hint.textContent = (src === 'auto' && res.detected) ? t('detected', { l: res.detected }) : '';
+    } catch (e) {
+      els.hint.textContent = String((e && e.message) || e);
+    }
+  }
+
+  function createPanel() {
+    panel = document.createElement('div');
+    panel.id = PANEL_ID;
+    panel.setAttribute('translate', 'no');
+    panel.hidden = true;
+    panel.style.cssText =
+      'position:fixed;right:70px;bottom:16px;z-index:2147483646;width:560px;max-width:calc(100vw - 32px);' +
+      'background:#fff;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.28);' +
+      'font:13px/1.5 system-ui,"Segoe UI",sans-serif;color:#1f2937;overflow:hidden;';
+
+    const header = document.createElement('div');
+    header.style.cssText =
+      'display:flex;align-items:center;justify-content:space-between;padding:8px 12px;' +
+      'background:#3b5bdb;color:#fff;cursor:move;user-select:none;';
+    const title = document.createElement('span');
+    title.textContent = t('wPanelTitle');
+    const close = document.createElement('button');
+    close.textContent = '×';
+    close.type = 'button';
+    close.style.cssText = 'border:0;background:none;color:#fff;font-size:18px;cursor:pointer;line-height:1;padding:0 2px;';
+    close.addEventListener('click', () => { panel.hidden = true; });
+    header.append(title, close);
+
+    const langRow = document.createElement('div');
+    langRow.style.cssText = 'display:flex;align-items:center;gap:6px;padding:8px 10px 0;';
+    const srcSel = document.createElement('select');
+    const swapBtn = document.createElement('button');
+    swapBtn.textContent = '⇄';
+    swapBtn.type = 'button';
+    swapBtn.title = t('swapTitle');
+    swapBtn.style.cssText = 'border:1px solid #d1d5db;background:#f9fafb;border-radius:8px;padding:5px 10px;cursor:pointer;font-size:14px;';
+    swapBtn.addEventListener('click', swapLangs);
+    const tgtSel = document.createElement('select');
+    const selStyle = 'flex:1;min-width:0;padding:6px 8px;border:1px solid #d1d5db;border-radius:8px;font-size:12px;background:#fff;';
+    srcSel.style.cssText = selStyle;
+    tgtSel.style.cssText = selStyle;
+    langRow.append(srcSel, swapBtn, tgtSel);
+
+    const body = document.createElement('div');
+    body.style.cssText = 'display:flex;gap:8px;padding:8px 10px 0;';
+    const srcArea = document.createElement('textarea');
+    srcArea.placeholder = t('phSource');
+    const tgtArea = document.createElement('textarea');
+    tgtArea.placeholder = t('phTarget');
+    tgtArea.readOnly = true;
+    const areaStyle =
+      'flex:1;min-width:0;height:180px;resize:none;border:1px solid #e5e7eb;border-radius:8px;' +
+      'padding:8px;font:inherit;background:#f9fafb;';
+    srcArea.style.cssText = areaStyle;
+    tgtArea.style.cssText = areaStyle;
+    body.append(srcArea, tgtArea);
+
+    const foot = document.createElement('div');
+    foot.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:8px 10px 10px;';
+    const hint = document.createElement('span');
+    hint.style.cssText = 'font-size:11px;color:#9ca3af;';
+    const goBtn = document.createElement('button');
+    goBtn.type = 'button';
+    goBtn.textContent = t('panelTranslate');
+    goBtn.style.cssText =
+      'border:0;border-radius:8px;background:#3b5bdb;color:#fff;padding:7px 16px;cursor:pointer;font:inherit;font-size:12px;';
+    goBtn.addEventListener('click', panelTranslate);
+    foot.append(hint, goBtn);
+
+    panel.append(header, langRow, body, foot);
+    (document.body || document.documentElement).appendChild(panel);
+    panel._els = { title, srcSel, tgtSel, srcArea, tgtArea, hint, goBtn, swapBtn };
+
+    fillPanelLangs(srcSel, true);
+    fillPanelLangs(tgtSel, false);
+    srcSel.addEventListener('change', () => { persistPanelLangs(); panelTranslate(); });
+    tgtSel.addEventListener('change', () => { persistPanelLangs(); panelTranslate(); });
+    srcArea.addEventListener('input', () => {
+      clearTimeout(panelTimer);
+      panelTimer = setTimeout(panelTranslate, 800);
+    });
+
+    // 拖动：按住标题栏移动
+    header.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0 && e.pointerType === 'mouse') return;
+      const rect = panel.getBoundingClientRect();
+      panelDrag = { sx: e.clientX, sy: e.clientY, ox: rect.left, oy: rect.top };
+      const onMove = (ev) => {
+        if (!panelDrag) return;
+        applyPanelPos(
+          panel,
+          clamp(panelDrag.ox + ev.clientX - panelDrag.sx, 0, window.innerWidth - panel.offsetWidth),
+          clamp(panelDrag.oy + ev.clientY - panelDrag.sy, 0, window.innerHeight - panel.offsetHeight)
+        );
+      };
+      const onUp = () => {
+        if (!panelDrag) return;
+        panelDrag = null;
+        const r = panel.getBoundingClientRect();
+        try {
+          chrome.storage.local.set({ panelPos: { x: Math.round(r.left), y: Math.round(r.top) } }).catch(() => {});
+        } catch (err) {}
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+        window.removeEventListener('pointercancel', onUp);
+      };
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+      window.addEventListener('pointercancel', onUp);
+    });
+
+    // 恢复上次位置和语言选择
+    try {
+      chrome.storage.local.get(['panelPos', 'panelSrc', 'panelTgt']).then((s) => {
+        if (s.panelPos && typeof s.panelPos.x === 'number') {
+          applyPanelPos(panel, clamp(s.panelPos.x, 0, window.innerWidth - panel.offsetWidth), clamp(s.panelPos.y, 0, window.innerHeight - panel.offsetHeight));
+        }
+        if (s.panelSrc) { panelSrc = s.panelSrc; srcSel.value = panelSrc; }
+        if (s.panelTgt) { panelTgt = s.panelTgt; tgtSel.value = panelTgt; }
+      }).catch(() => {});
+    } catch (err) {}
+  }
+
+  function togglePanel() {
+    if (!panel) createPanel();
+    panel.hidden = !panel.hidden;
+    if (!panel.hidden) panel._els.srcArea.focus();
+  }
+
   // ---------- Messages from popup / shortcut ----------
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (!msg) return false;
@@ -462,6 +679,16 @@
         widgetButtons.restore.textContent = t('wBtnRestore');
         widgetButtons.trans.title = t('wTrans') + '\n' + t('wDrag');
         widgetButtons.restore.title = t('wRestore') + '\n' + t('wDrag');
+        if (widgetButtons.panel) widgetButtons.panel.title = t('wPanelTitle') + '\n' + t('wDrag');
+        if (panel && panel._els) {
+          panel._els.title.textContent = t('wPanelTitle');
+          panel._els.srcArea.placeholder = t('phSource');
+          panel._els.tgtArea.placeholder = t('phTarget');
+          panel._els.goBtn.textContent = t('panelTranslate');
+          panel._els.swapBtn.title = t('swapTitle');
+          const firstOpt = panel._els.srcSel.options[0];
+          if (firstOpt && firstOpt.value === 'auto') firstOpt.textContent = t('panelAuto');
+        }
       }
     }
     sendResponse({ ok: true });

@@ -91,8 +91,8 @@ async function addUsage(usage, isDeepSeek) {
 }
 
 // ---------- Translation ----------
-function buildSystemPrompt(targetName) {
-  return [
+function buildSystemPrompt(targetName, detect) {
+  const lines = [
     'You are a professional web page translation engine. The user sends a JSON object {"texts": ["...", "..."]}. Translate every string in the texts array into ' + targetName + '.',
     'Requirements:',
     '1) Output ONLY a JSON object {"translations": ["...", "..."]} whose array length exactly matches the input.',
@@ -101,7 +101,11 @@ function buildSystemPrompt(targetName) {
     '4) Translate naturally and fluently, never word-for-word.',
     '5) Return strings that are already in ' + targetName + ' unchanged.',
     '6) Output JSON only — no explanations, no markdown fences.'
-  ].join('\n');
+  ];
+  if (detect) {
+    lines.push('7) Additionally include a "detected" field in the JSON object: the source language of the input, in English (e.g. "English", "Chinese", "Japanese").');
+  }
+  return lines.join('\n');
 }
 
 // Robust JSON extraction (some providers ignore response_format or wrap in fences)
@@ -196,16 +200,19 @@ function resolveConfig(s) {
   return { provId, prov, baseURL, model, apiKey, isDeepSeek, uiLang, targetName };
 }
 
-async function callAI(texts) {
+async function callAI(texts, opts = {}) {
   const s = await chrome.storage.local.get(['provider', 'apiKeys', 'model', 'customBaseURL', 'customModel', 'targetLang', 'uiLang']);
   const cfg = resolveConfig(s);
-  const { prov, baseURL, model, apiKey, isDeepSeek, uiLang, targetName } = cfg;
+  const { prov, baseURL, model, apiKey, isDeepSeek, uiLang } = cfg;
+  // 文本翻译面板可覆盖目标语言
+  const targetCode = opts.targetCode || s.targetLang || aiTransDefaultTarget(uiLang);
+  const targetName = AI_TRANS_TARGETS[targetCode] || 'English';
 
   if (!baseURL) throw new Error('AI_T#NO_MODEL#');
   if (!apiKey && !(prov && prov.noKey)) throw new Error('AI_T#NO_KEY#');
   if (!model) throw new Error('AI_T#NO_MODEL#');
 
-  const system = buildSystemPrompt(targetName);
+  const system = buildSystemPrompt(targetName, !!opts.detect);
   const userContent = JSON.stringify({ texts });
 
   let result;
@@ -229,7 +236,7 @@ async function callAI(texts) {
   if (!Array.isArray(result.obj.translations)) throw new Error('AI_T#BADJSON#');
   const translations = result.obj.translations.slice();
   while (translations.length < texts.length) translations.push(null); // 缺失项置 null，内容脚本会保留原文
-  return { translations, usage: result.usage, isDeepSeek, cost: isDeepSeek ? calcDeepSeekCost(result.usage) : 0 };
+  return { translations, detected: result.obj.detected || '', usage: result.usage, isDeepSeek, cost: isDeepSeek ? calcDeepSeekCost(result.usage) : 0 };
 }
 
 // Connection test: hit the provider's /models endpoint (read-only, cheap)
@@ -266,10 +273,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (!msg) return;
 
   if (msg.type === 'DS_API') {
-    callAI(msg.texts)
-      .then(({ translations, usage, isDeepSeek, cost }) => {
+    callAI(msg.texts, { targetCode: msg.targetCode, detect: !!msg.detect })
+      .then(({ translations, detected, usage, isDeepSeek, cost }) => {
         addUsage(usage, isDeepSeek); // fire-and-forget
-        sendResponse({ ok: true, translations, usage, cost });
+        sendResponse({ ok: true, translations, detected, usage, cost });
       })
       .catch((e) => {
         const { code, detail } = errorToCode(e);

@@ -75,8 +75,14 @@ function onProviderChange() {
     }
   }
   if (p) {
-    $('model').placeholder = p.defaultModel || '';
-    $('model').value = p.defaultModel || ''; // 切换服务商时填入该服务商的默认模型
+    $('model').placeholder = (p.id === 'custom') ? '' : (p.defaultModel || '');
+    if (p.id === 'custom') {
+      // 自定义服务商必须保留已填写的模型名
+      $('model').value = (settings.customModel) || '';
+    } else {
+      // 清空输入：datalist 会按输入值过滤建议，有值就只看得到一条
+      $('model').value = '';
+    }
   }
   // prefill API key for this provider
   const apiKeys = settings.apiKeys || {};
@@ -108,7 +114,16 @@ async function load() {
   $('provider').value = s.provider && providers.some((p) => p.id === s.provider) ? s.provider : (providers[0] ? providers[0].id : 'custom');
   onProviderChange();
 
-  $('model').value = s.model || '';
+  // 输入框保持为空（占位符显示生效模型），这样点击才能看到完整的下拉建议；
+  // 自定义服务商例外：必须回显已保存的模型名
+  const pNow = currentProvider();
+  if (pNow && pNow.id === 'custom') {
+    $('model').value = s.customModel || '';
+    $('model').placeholder = '';
+  } else {
+    $('model').value = '';
+    $('model').placeholder = s.model || (pNow ? pNow.defaultModel : '');
+  }
   $('targetLang').value = s.targetLang || aiTransDefaultTarget(uiLang);
   $('baseURL').value = s.customBaseURL || '';
   $('autoGlobal').checked = !!s.globalAuto;
@@ -304,19 +319,31 @@ $('fetchModels').addEventListener('click', async (ev) => {
       return;
     }
     const models = res.models || [];
+    // 归一化：去掉 "models/" 前缀、去重、过滤明显非对话类模型（图片/音频/embedding 等）
+    const seen = new Set();
+    const cleaned = [];
+    for (const raw of models) {
+      const id = String(raw).replace(/^models\//, '').trim();
+      if (!id || seen.has(id)) continue;
+      if (/embedding|tts|imagen|dall|whisper|transcri|realtime|audio|speech|image/i.test(id)) continue;
+      seen.add(id);
+      cleaned.push(id);
+    }
     const dl = $('modelList');
     dl.innerHTML = '';
-    for (const m of models.slice(0, 200)) {
+    for (const m of cleaned.slice(0, 200)) {
       const o = document.createElement('option');
       o.value = m;
       dl.appendChild(o);
     }
-    if (models.length && !models.includes($('model').value.trim())) {
-      // 自动选一个翻译友好的模型（flash 系列优先）
-      const pick = models.find((m) => /flash-lite|flash|haiku/i.test(m)) || models[0];
-      $('model').value = pick;
-    }
-    setStatus(t('fetchedModels', { n: models.length }));
+    // 当前值不在列表里就清空，让用户点开看到完整列表后再选
+    const cur = $('model').value.trim();
+    if (cur && !cleaned.includes(cur)) $('model').value = '';
+    $('model').placeholder =
+      cleaned.find((m) => /flash-lite/i.test(m)) ||
+      cleaned.find((m) => /flash/i.test(m)) ||
+      cleaned[0] || '';
+    setStatus(t('fetchedModels', { n: cleaned.length }));
   } catch (e) {
     setStatus(t('modelFetchFail', { e: String((e && e.message) || e) }), true);
   }

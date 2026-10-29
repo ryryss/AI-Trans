@@ -74,7 +74,10 @@ function onProviderChange() {
       dl.appendChild(o);
     }
   }
-  if (p) $('model').placeholder = p.defaultModel || '';
+  if (p) {
+    $('model').placeholder = p.defaultModel || '';
+    $('model').value = p.defaultModel || ''; // 切换服务商时填入该服务商的默认模型
+  }
   // prefill API key for this provider
   const apiKeys = settings.apiKeys || {};
   $('apiKey').value = apiKeys[p ? p.id : ''] || '';
@@ -126,20 +129,15 @@ async function load() {
   applyI18n();
 }
 
-async function saveSettings() {
+// 自动保存：所有改动即时落盘（无"保存"按钮）；key 留空 = 清除该服务商的密钥
+let saveTimer = null;
+
+async function persistSettings() {
   const provId = $('provider').value;
-  const p = currentProvider();
-  const key = $('apiKey').value.trim();
-  // 需要密钥的服务商不允许空 key 保存，避免翻译时才发现
-  if (!(p && p.noKey) && !key) {
-    setStatus(t('errNoKey'), true);
-    return;
-  }
   const s = await chrome.storage.local.get(['apiKeys', 'autoSites']);
   const apiKeys = s.apiKeys || {};
   const autoSites = s.autoSites || {};
-
-  apiKeys[provId] = key;
+  apiKeys[provId] = $('apiKey').value.trim(); // 允许空值：清空输入框即删除密钥
 
   const payload = {
     provider: provId,
@@ -166,7 +164,13 @@ async function saveSettings() {
   } catch (e) {}
 
   setStatus(t('saved'));
+  const p = currentProvider();
   if (p && p.id === 'deepseek') loadBalance();
+}
+
+function scheduleAutoSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(persistSettings, 400);
 }
 
 // ---------- Statistics & balance ----------
@@ -245,8 +249,16 @@ $('uiLang').addEventListener('change', async () => {
     }
   } catch (e) {}
 });
-$('provider').addEventListener('change', onProviderChange);
-$('save').addEventListener('click', saveSettings);
+$('provider').addEventListener('change', () => { onProviderChange(); persistSettings(); });
+$('apiKey').addEventListener('input', scheduleAutoSave);
+$('apiKey').addEventListener('change', persistSettings); // 失焦立即落盘，防止输入完就关面板丢数据
+$('model').addEventListener('input', scheduleAutoSave);
+$('model').addEventListener('change', persistSettings);
+$('baseURL').addEventListener('input', scheduleAutoSave);
+$('baseURL').addEventListener('change', persistSettings);
+$('targetLang').addEventListener('change', persistSettings);
+$('autoSite').addEventListener('change', persistSettings);
+$('autoGlobal').addEventListener('change', persistSettings);
 $('testConn').addEventListener('click', async () => {
   // 用当前表单内容做连通性测试（无需先保存），直达服务商 /models 接口
   setStatus(t('testConn') + '…');

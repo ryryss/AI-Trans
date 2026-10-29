@@ -238,6 +238,7 @@ async function testConnection(config) {
   if (!s) s = await chrome.storage.local.get(['provider', 'apiKeys', 'model', 'customBaseURL', 'customModel', 'targetLang', 'uiLang']);
   const cfg = resolveConfig(s);
   const { prov, baseURL, apiKey, uiLang } = cfg;
+  if (!baseURL) return { ok: false, latency: 0, code: 'NO_MODEL', detail: '' };
   const t0 = Date.now();
   const isAnthropic = prov && prov.type === 'anthropic';
   const headers = isAnthropic
@@ -306,6 +307,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       if (!s) s = await chrome.storage.local.get(['provider', 'apiKeys', 'model', 'customBaseURL', 'customModel', 'targetLang', 'uiLang']);
       const cfg = resolveConfig(s);
       const { prov, baseURL, apiKey, uiLang } = cfg;
+      if (!baseURL) return sendResponse({ ok: false, code: 'NO_MODEL', detail: '' });
       const isAnthropic = prov && prov.type === 'anthropic';
       const headers = isAnthropic
         ? { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' }

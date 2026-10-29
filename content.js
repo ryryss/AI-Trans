@@ -441,8 +441,21 @@
       translated.clear();
     }
     else if (msg.type === 'DS_SETTINGS') {
+      const prevTarget = settings.targetLang;
       settings = Object.assign(settings, msg.settings || {});
       settings.uiLang = (!settings.uiLang || settings.uiLang === 'auto') ? aiTransDetect() : aiTransLang(settings.uiLang);
+      // 目标语言变化：还原已翻译的内容，并用新语言重新翻译（否则旧译文被"已翻译"标记挡住，切换无效）
+      const newTarget = msg.settings && msg.settings.targetLang;
+      if (newTarget && newTarget !== prevTarget) {
+        const had = translated.size > 0;
+        for (const [node, rec] of translated) { node.nodeValue = rec.orig; }
+        translated.clear();
+        const host = location.hostname;
+        const auto = settings.globalAuto || (settings.autoSites && settings.autoSites[host]);
+        if (had || auto) {
+          setTimeout(() => { translatePage(document.body, { silent: !had }); startObserver(); }, 300);
+        }
+      }
       // 语言切换后即时更新浮动按钮文案与提示
       if (widgetButtons.trans) {
         widgetButtons.trans.textContent = t('wBtnTranslate');

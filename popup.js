@@ -156,8 +156,15 @@ async function load() {
 // 自动保存：所有改动即时落盘（无"保存"按钮）；key 留空 = 清除该服务商的密钥
 let saveTimer = null;
 let pendingProvider = null; // 输入那一刻绑定的服务商，防止防抖保存写到错误的服务商名下
+let pendingSave = Promise.resolve(); // 待完成的保存，点击翻译前先等它落盘
 
-async function persistSettings(provId) {
+function persistSettings(provId) {
+  const p = doPersist(provId);
+  pendingSave = p.catch(() => {});
+  return p;
+}
+
+async function doPersist(provId) {
   provId = provId || $('provider').value;
   const s = await chrome.storage.local.get(['apiKeys', 'autoSites']);
   const apiKeys = s.apiKeys || {};
@@ -196,7 +203,7 @@ async function persistSettings(provId) {
 function scheduleAutoSave() {
   clearTimeout(saveTimer);
   pendingProvider = $('provider').value; // 输入那一刻记住服务商归属
-  saveTimer = setTimeout(() => persistSettings(pendingProvider), 400);
+  saveTimer = setTimeout(() => persistSettings(pendingProvider), 300);
 }
 
 // ---------- Statistics & balance ----------
@@ -265,14 +272,14 @@ $('uiLang').addEventListener('change', async () => {
   const v = $('uiLang').value;
   uiLang = (v === 'auto') ? aiTransDetect() : aiTransLang(v);
   applyI18n();
-  $('targetLang').value = settings.targetLang || aiTransDefaultTarget(uiLang);
-  // 立即持久化：一旦用户手动选择，就严格使用该语言（不依赖保存按钮，也不回退浏览器语言）
+  // 不改动目标语言（界面语言与翻译目标互不影响）
+  // 立即持久化，并广播给所有已打开的页面，让整个插件界面立刻全部刷新
   try {
     await chrome.storage.local.set({ uiLang: v });
     settings.uiLang = v;
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (tab && tab.id != null) {
-      chrome.tabs.sendMessage(tab.id, { type: 'DS_SETTINGS', settings: { uiLang: v } }).catch(() => {});
+    const tabs = await chrome.tabs.query({});
+    for (const tab of tabs) {
+      if (tab.id != null) chrome.tabs.sendMessage(tab.id, { type: 'DS_SETTINGS', settings: { uiLang: v } }).catch(() => {});
     }
   } catch (e) {}
 });
@@ -378,8 +385,8 @@ $('resetAll').addEventListener('click', async () => {
     location.reload();
   } catch (e) {}
 });
-$('translate').addEventListener('click', () => sendToTab('DS_TRANSLATE'));
-$('restore').addEventListener('click', () => sendToTab('DS_RESTORE'));
+$('translate').addEventListener('click', async () => { await pendingSave; sendToTab('DS_TRANSLATE'); });
+$('restore').addEventListener('click', async () => { await pendingSave; sendToTab('DS_RESTORE'); });
 $('clearStats').addEventListener('click', async () => {
   try {
     await chrome.runtime.sendMessage({ type: 'DS_CLEAR_STATS' });

@@ -493,12 +493,29 @@
     panelTranslate();
   }
 
+  function setPanelHint(data) {
+    if (!panel) return;
+    panel._hint = data;
+    renderPanelHint();
+  }
+
+  // 提示信息结构化存储，界面语言切换时立即用新语言重渲染
+  function renderPanelHint() {
+    if (!panel) return;
+    const d = panel._hint;
+    if (!d) { panel._els.hint.textContent = ''; return; }
+    if (d.kind === 'busy') panel._els.hint.textContent = '…';
+    else if (d.kind === 'detected') panel._els.hint.textContent = t('detected', { l: d.l });
+    else if (d.kind === 'err') panel._els.hint.textContent = aiTransErrText(settings.uiLang, d.code, d.detail);
+    else panel._els.hint.textContent = String(d.text || '');
+  }
+
   async function panelTranslate() {
     if (!panel) return;
     const els = panel._els;
     const text = els.srcArea.value.trim();
-    if (!text) { els.tgtArea.value = ''; els.hint.textContent = ''; return; }
-    els.hint.textContent = '…';
+    if (!text) { els.tgtArea.value = ''; setPanelHint(null); return; }
+    setPanelHint({ kind: 'busy' });
     const src = els.srcSel.value;
     const tgt = els.tgtSel.value;
     try {
@@ -509,14 +526,14 @@
         detect: src === 'auto'
       });
       if (!res || !res.ok) {
-        els.hint.textContent = (res && res.code) ? aiTransErrText(settings.uiLang, res.code, res.detail) : '?';
+        setPanelHint({ kind: 'err', code: (res && res.code) || 'UNKNOWN', detail: (res && res.detail) || '' });
         return;
       }
       const tr = res.translations && res.translations[0];
       els.tgtArea.value = typeof tr === 'string' ? tr : '';
-      els.hint.textContent = (src === 'auto' && res.detected) ? t('detected', { l: res.detected }) : '';
+      setPanelHint((src === 'auto' && res.detected) ? { kind: 'detected', l: res.detected } : null);
     } catch (e) {
-      els.hint.textContent = String((e && e.message) || e);
+      setPanelHint({ kind: 'text', text: String((e && e.message) || e) });
     }
   }
 
@@ -594,7 +611,7 @@
     tgtSel.addEventListener('change', () => { persistPanelLangs(); panelTranslate(); });
     srcArea.addEventListener('input', () => {
       clearTimeout(panelTimer);
-      panelTimer = setTimeout(panelTranslate, 800);
+      panelTimer = setTimeout(panelTranslate, 600);
     });
 
     // 拖动：按住标题栏移动
@@ -688,6 +705,7 @@
           panel._els.swapBtn.title = t('swapTitle');
           const firstOpt = panel._els.srcSel.options[0];
           if (firstOpt && firstOpt.value === 'auto') firstOpt.textContent = t('panelAuto');
+          renderPanelHint(); // 已有提示（如错误）立即用新语言重渲染
         }
       }
     }

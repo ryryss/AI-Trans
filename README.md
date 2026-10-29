@@ -43,7 +43,7 @@ Suggested budget-friendly models:
 |---|---|---|
 | DeepSeek | `deepseek-flash` | cheapest; thinking mode auto-disabled for speed |
 | OpenAI | `gpt-4o-mini` | solid quality, fast |
-| Google | `gemini-2.5-flash` | free tier, no credit card required |
+| Google | `gemini-3.1-flash-lite` | free tier, no credit card required |
 | Anthropic | `claude-3-5-haiku-latest` | fast and cheap Claude |
 | Local | Ollama `qwen2.5:7b` | free, runs on your own machine |
 
@@ -77,7 +77,7 @@ Several providers let you test AI-Trans without spending anything:
 
 | Provider | Free access | How to get a key |
 |---|---|---|
-| **Google Gemini** | Free tier, no credit card, never expires | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) → Create API key. Use a Google account without billing; models like `gemini-2.5-flash` / `gemini-3.1-flash-lite` have generous daily quotas |
+| **Google Gemini** | Free tier, no credit card, never expires | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) → Create API key. Use a Google account without billing; free models include `gemini-3.1-flash-lite`, `gemini-3.8-flash`, `gemini-3.6-flash` and `gemma-4-31b-it`. Tip: click **Fetch model list** in the popup to load the exact model names your key can use |
 | **Groq** | Free tier with rate limits | [console.groq.com/keys](https://console.groq.com/keys) |
 | **SiliconFlow** | New-user token gift | [cloud.siliconflow.cn](https://cloud.siliconflow.cn) (Chinese phone number) |
 | **Zhipu GLM** | `glm-4-flash` free model | [open.bigmodel.cn](https://open.bigmodel.cn/usercenter/apikeys) (Chinese phone number) |

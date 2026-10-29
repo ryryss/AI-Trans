@@ -8,7 +8,7 @@ importScripts('i18n.js');
 const PROVIDERS = [
   { id: 'deepseek', name: 'DeepSeek', type: 'openai', baseURL: 'https://api.deepseek.com', keyUrl: 'https://platform.deepseek.com/api_keys', defaultModel: 'deepseek-flash', modelOptions: ['deepseek-flash', 'deepseek-v4-pro'] },
   { id: 'openai', name: 'OpenAI', type: 'openai', baseURL: 'https://api.openai.com/v1', keyUrl: 'https://platform.openai.com/api-keys', defaultModel: 'gpt-4o-mini', modelOptions: ['gpt-4o-mini', 'gpt-4.1-mini', 'gpt-4o'] },
-  { id: 'gemini', name: 'Google Gemini', type: 'openai', baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai', keyUrl: 'https://aistudio.google.com/apikey', defaultModel: 'gemini-2.5-flash', modelOptions: ['gemini-2.5-flash', 'gemini-3.1-flash-lite', 'gemma-4-26b', 'gemini-2.0-flash'] },
+  { id: 'gemini', name: 'Google Gemini', type: 'openai', baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai', keyUrl: 'https://aistudio.google.com/apikey', defaultModel: 'gemini-3.1-flash-lite', modelOptions: ['gemini-3.1-flash-lite', 'gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemma-4-31b-it', 'gemini-2.5-flash'] },
   { id: 'claude', name: 'Anthropic Claude', type: 'anthropic', baseURL: 'https://api.anthropic.com/v1/messages', keyUrl: 'https://console.anthropic.com/settings/keys', defaultModel: 'claude-3-5-haiku-latest', modelOptions: ['claude-3-5-haiku-latest', 'claude-haiku-4-5', 'claude-sonnet-4-5'] },
   { id: 'openrouter', name: 'OpenRouter', type: 'openai', baseURL: 'https://openrouter.ai/api/v1', keyUrl: 'https://openrouter.ai/keys', defaultModel: '', modelOptions: ['openai/gpt-4o-mini', 'anthropic/claude-3.5-haiku', 'google/gemini-2.0-flash-001', 'deepseek/deepseek-chat'] },
   { id: 'moonshot', name: 'Moonshot Kimi', type: 'openai', baseURL: 'https://api.moonshot.cn/v1', keyUrl: 'https://platform.moonshot.cn/console/api-keys', defaultModel: 'moonshot-v1-8k', modelOptions: ['moonshot-v1-8k', 'kimi-latest'] },
@@ -299,6 +299,35 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
   if (msg.type === 'DS_TEST') {
     testConnection(msg.config).then((r) => sendResponse(r));
+    return true;
+  }
+
+  if (msg.type === 'DS_MODELS') {
+    // 拉取该 key 实际可用的模型列表（解决 404：从真实模型名里选）
+    (async () => {
+      let s = msg.config;
+      if (!s) s = await chrome.storage.local.get(['provider', 'apiKeys', 'model', 'customBaseURL', 'customModel', 'targetLang', 'uiLang']);
+      const cfg = resolveConfig(s);
+      const { prov, baseURL, apiKey, uiLang } = cfg;
+      const isAnthropic = prov && prov.type === 'anthropic';
+      const headers = isAnthropic
+        ? { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' }
+        : { Authorization: 'Bearer ' + apiKey };
+      const url = isAnthropic
+        ? baseURL.replace(/\/messages$/, '') + '/models'
+        : baseURL.replace(/\/+$/, '') + '/models';
+      try {
+        const resp = await fetch(url, { headers, signal: AbortSignal.timeout(15000) });
+        if (!resp.ok) {
+          return sendResponse({ ok: false, error: friendlyError(new Error('HTTP ' + resp.status + ' · ' + await apiErrorDetail(resp)), uiLang) });
+        }
+        const data = await resp.json();
+        const list = (data.data || []).map((m) => m && m.id).filter(Boolean);
+        sendResponse({ ok: true, models: list });
+      } catch (e) {
+        sendResponse({ ok: false, error: friendlyError(e, uiLang) });
+      }
+    })();
     return true;
   }
 

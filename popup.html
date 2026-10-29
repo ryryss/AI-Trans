@@ -9,7 +9,7 @@
   <header>
     <img src="icons/icon48.png" alt="AI-Trans">
     <div class="head-text">
-      <div class="title">AI-Trans <span class="ver">v1.1.0</span></div>
+      <div class="title">AI-Trans <span class="ver">v1.1.1</span></div>
       <div class="sub" data-i18n="shortAlt"></div>
     </div>
   </header>
@@ -38,7 +38,10 @@
   </div>
   <input type="password" id="apiKey" data-i18n-ph="apiKeyPh" autocomplete="off" spellcheck="false">
 
-  <label data-i18n="model"></label>
+  <div class="label-row">
+    <label data-i18n="model"></label>
+    <a id="fetchModels" href="#" data-i18n="fetchModels"></a>
+  </div>
   <input type="text" id="model" list="modelList" autocomplete="off" spellcheck="false">
   <datalist id="modelList"></datalist>
 

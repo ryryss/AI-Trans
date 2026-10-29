@@ -71,6 +71,9 @@ const AI_TRANS_I18N = {
     testConn: 'Test connection',
     connOK: 'Connected ✓ · {ms} ms',
     connFail: 'Connection failed: {e}',
+    fetchModels: 'Fetch model list',
+    fetchedModels: 'Loaded {n} models',
+    modelFetchFail: 'Model list failed: {e}',
     wBtnTranslate: 'T',
     wBtnRestore: 'R'
   },
@@ -144,6 +147,9 @@ const AI_TRANS_I18N = {
     testConn: '测试连接',
     connOK: '连接成功 ✓ · {ms} 毫秒',
     connFail: '连接失败：{e}',
+    fetchModels: '获取模型列表',
+    fetchedModels: '已获取 {n} 个模型',
+    modelFetchFail: '获取模型列表失败：{e}',
     wBtnTranslate: '译',
     wBtnRestore: '原'
   },
@@ -217,6 +223,9 @@ const AI_TRANS_I18N = {
     testConn: '測試連線',
     connOK: '連線成功 ✓ · {ms} 毫秒',
     connFail: '連線失敗：{e}',
+    fetchModels: '取得模型清單',
+    fetchedModels: '已取得 {n} 個模型',
+    modelFetchFail: '取得模型清單失敗：{e}',
     wBtnTranslate: '譯',
     wBtnRestore: '原'
   },
@@ -290,6 +299,9 @@ const AI_TRANS_I18N = {
     testConn: '接続テスト',
     connOK: '接続成功 ✓ · {ms} ms',
     connFail: '接続失敗：{e}',
+    fetchModels: 'モデル一覧を取得',
+    fetchedModels: '{n} 個のモデルを取得しました',
+    modelFetchFail: 'モデル一覧の取得に失敗：{e}',
     wBtnTranslate: '訳',
     wBtnRestore: '原'
   },
@@ -363,6 +375,9 @@ const AI_TRANS_I18N = {
     testConn: '연결 테스트',
     connOK: '연결 성공 ✓ · {ms} ms',
     connFail: '연결 실패: {e}',
+    fetchModels: '모델 목록 가져오기',
+    fetchedModels: '{n}개 모델 로드됨',
+    modelFetchFail: '모델 목록 실패: {e}',
     wBtnTranslate: '번',
     wBtnRestore: '원'
   },
@@ -436,6 +451,9 @@ const AI_TRANS_I18N = {
     testConn: 'Verbindung testen',
     connOK: 'Verbunden ✓ · {ms} ms',
     connFail: 'Verbindung fehlgeschlagen: {e}',
+    fetchModels: 'Modellliste abrufen',
+    fetchedModels: '{n} Modelle geladen',
+    modelFetchFail: 'Modellliste fehlgeschlagen: {e}',
     wBtnTranslate: 'T',
     wBtnRestore: 'R'
   },
@@ -509,6 +527,9 @@ const AI_TRANS_I18N = {
     testConn: 'Tester la connexion',
     connOK: 'Connecté ✓ · {ms} ms',
     connFail: 'Échec de la connexion : {e}',
+    fetchModels: 'Récupérer les modèles',
+    fetchedModels: '{n} modèles chargés',
+    modelFetchFail: 'Échec de la liste : {e}',
     wBtnTranslate: 'T',
     wBtnRestore: 'R'
   },
@@ -582,6 +603,9 @@ const AI_TRANS_I18N = {
     testConn: 'Probar conexión',
     connOK: 'Conectado ✓ · {ms} ms',
     connFail: 'Fallo de conexión: {e}',
+    fetchModels: 'Obtener modelos',
+    fetchedModels: '{n} modelos cargados',
+    modelFetchFail: 'Fallo al obtener modelos: {e}',
     wBtnTranslate: 'T',
     wBtnRestore: 'R'
   },
@@ -655,6 +679,9 @@ const AI_TRANS_I18N = {
     testConn: 'Проверить соединение',
     connOK: 'Подключено ✓ · {ms} мс',
     connFail: 'Ошибка соединения: {e}',
+    fetchModels: 'Получить список моделей',
+    fetchedModels: 'Загружено моделей: {n}',
+    modelFetchFail: 'Не удалось получить список: {e}',
     wBtnTranslate: 'T',
     wBtnRestore: 'R'
   },
@@ -728,6 +755,9 @@ const AI_TRANS_I18N = {
     testConn: 'Testar conexão',
     connOK: 'Conectado ✓ · {ms} ms',
     connFail: 'Falha na conexão: {e}',
+    fetchModels: 'Buscar modelos',
+    fetchedModels: '{n} modelos carregados',
+    modelFetchFail: 'Falha ao buscar modelos: {e}',
     wBtnTranslate: 'T',
     wBtnRestore: 'R'
   }

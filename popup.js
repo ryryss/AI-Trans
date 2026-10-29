@@ -230,11 +230,20 @@ async function sendToTab(type) {
 }
 
 // ---------- Events ----------
-$('uiLang').addEventListener('change', () => {
+$('uiLang').addEventListener('change', async () => {
   const v = $('uiLang').value;
   uiLang = (v === 'auto') ? aiTransDetect() : aiTransLang(v);
   applyI18n();
   $('targetLang').value = settings.targetLang || aiTransDefaultTarget(uiLang);
+  // 立即持久化：一旦用户手动选择，就严格使用该语言（不依赖保存按钮，也不回退浏览器语言）
+  try {
+    await chrome.storage.local.set({ uiLang: v });
+    settings.uiLang = v;
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab && tab.id != null) {
+      chrome.tabs.sendMessage(tab.id, { type: 'DS_SETTINGS', settings: { uiLang: v } }).catch(() => {});
+    }
+  } catch (e) {}
 });
 $('provider').addEventListener('change', onProviderChange);
 $('save').addEventListener('click', saveSettings);
@@ -260,6 +269,46 @@ $('testConn').addEventListener('click', async () => {
     setStatus(t('connFail', { e: String((e && e.message) || e) }), true);
   }
 });
+$('fetchModels').addEventListener('click', async (ev) => {
+  ev.preventDefault();
+  // 拉取当前 key 实际可用的模型列表，从真实模型名中选择（避免 404）
+  setStatus(t('fetchModels') + '…');
+  try {
+    const p = currentProvider();
+    const apiKeys = {};
+    apiKeys[p ? p.id : 'custom'] = $('apiKey').value.trim();
+    const config = {
+      provider: $('provider').value,
+      apiKeys,
+      model: $('model').value.trim(),
+      customBaseURL: $('baseURL').value.trim(),
+      customModel: $('model').value.trim(),
+      uiLang: $('uiLang').value
+    };
+    const res = await chrome.runtime.sendMessage({ type: 'DS_MODELS', config });
+    if (!res || !res.ok) {
+      setStatus(t('modelFetchFail', { e: (res && res.error) || '' }), true);
+      return;
+    }
+    const models = res.models || [];
+    const dl = $('modelList');
+    dl.innerHTML = '';
+    for (const m of models.slice(0, 200)) {
+      const o = document.createElement('option');
+      o.value = m;
+      dl.appendChild(o);
+    }
+    if (models.length && !models.includes($('model').value.trim())) {
+      // 自动选一个翻译友好的模型（flash 系列优先）
+      const pick = models.find((m) => /flash-lite|flash|haiku/i.test(m)) || models[0];
+      $('model').value = pick;
+    }
+    setStatus(t('fetchedModels', { n: models.length }));
+  } catch (e) {
+    setStatus(t('modelFetchFail', { e: String((e && e.message) || e) }), true);
+  }
+});
+
 $('resetAll').addEventListener('click', async () => {
   if (!confirm(t('resetConfirm'))) return;
   try {

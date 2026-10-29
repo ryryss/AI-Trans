@@ -587,14 +587,24 @@
     const els = panel._els;
     const src = els.srcSel.value;
     const tgt = els.tgtSel.value;
+    // 语言互换（源为"自动"时，新目标语言用检测到的语言，检测不到则回落默认）
     if (src === 'auto') {
       els.srcSel.value = tgt;
-      els.tgtSel.value = panelTargetDefault();
+      els.tgtSel.value = panel._detectedCode || panelTargetDefault();
     } else {
       els.srcSel.value = tgt;
       els.tgtSel.value = src;
     }
     persistPanelLangs();
+    // 内容互换（谷歌翻译风格）：旧译文变新原文，重新翻译成新目标语言
+    const oldTgt = els.tgtArea.value;
+    if (oldTgt.trim()) {
+      els.srcArea.value = oldTgt;
+      els.tgtArea.value = '';
+      panel._detected = '';
+      panel._detectedCode = '';
+      updateAutoOption();
+    }
     panelTranslate();
   }
 
@@ -650,7 +660,7 @@
         type: 'DS_API',
         texts: [text],
         targetCode: tgt,
-        detect: src === 'auto'
+        detect: true // 面板始终让模型检测语言：内容与所选源语言不符时自动纠正
       });
       if (!res || !res.ok) {
         setPanelHint({ kind: 'err', code: (res && res.code) || 'UNKNOWN', detail: (res && res.detail) || '' });
@@ -661,8 +671,21 @@
       if (typeof tr === 'string' && tr.trim()) {
         cacheSet(ck, tr); // 写入缓存，下次秒回
       }
-      panel._detected = (src === 'auto' && res.detected) ? localizedLangName(res.detected) : '';
-      panel._detectedCode = (src === 'auto' && res.detected) ? detectLangCode(res.detected) : '';
+      // 内容与所选源语言不符 → 自动改回"自动检测"，按实际语言翻译成目标语言
+      let effSrc = src;
+      const detCode = res.detected ? detectLangCode(res.detected) : '';
+      if (src !== 'auto' && detCode && detCode.toLowerCase() !== src.toLowerCase()) {
+        els.srcSel.value = 'auto';
+        persistPanelLangs();
+        effSrc = 'auto';
+      }
+      if (effSrc === 'auto' && res.detected) {
+        panel._detected = localizedLangName(res.detected);
+        panel._detectedCode = detCode;
+      } else {
+        panel._detected = '';
+        panel._detectedCode = '';
+      }
       updateAutoOption();
       const used = res.usage ? (res.usage.prompt_tokens || 0) + (res.usage.completion_tokens || 0) : 0;
       setPanelHint({ kind: 'tokens', t: fmtTokens(used) });

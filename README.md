@@ -42,7 +42,7 @@ Suggested budget-friendly models:
 |---|---|---|
 | DeepSeek | `deepseek-flash` | cheapest; thinking mode auto-disabled for speed |
 | OpenAI | `gpt-4o-mini` | solid quality, fast |
-| Google | `gemini-2.0-flash` | fast, generous free tier |
+| Google | `gemini-2.5-flash` | free tier, no credit card required |
 | Anthropic | `claude-3-5-haiku-latest` | fast and cheap Claude |
 | Local | Ollama `qwen2.5:7b` | free, runs on your own machine |
 
@@ -69,6 +69,18 @@ page text nodes → filter (skip code/inputs/hidden) → per-sentence cache look
 ```
 
 A `MutationObserver` watches for new or rewritten text (`childList` + `characterData`), so dynamic content keeps translating.
+
+## 🎁 Free API keys for testing
+
+Several providers let you test AI-Trans without spending anything:
+
+| Provider | Free access | How to get a key |
+|---|---|---|
+| **Google Gemini** | Free tier, no credit card, never expires | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) → Create API key. Use a Google account without billing; models like `gemini-2.5-flash` / `gemini-3.1-flash-lite` have generous daily quotas |
+| **Groq** | Free tier with rate limits | [console.groq.com/keys](https://console.groq.com/keys) |
+| **SiliconFlow** | New-user token gift | [cloud.siliconflow.cn](https://cloud.siliconflow.cn) (Chinese phone number) |
+| **Zhipu GLM** | `glm-4-flash` free model | [open.bigmodel.cn](https://open.bigmodel.cn/usercenter/apikeys) (Chinese phone number) |
+| **Ollama** | Totally free, runs locally | Install [Ollama](https://ollama.com), pull a model (e.g. `ollama pull qwen2.5:7b`), no key needed |
 
 ## 🔒 Privacy
 

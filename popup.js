@@ -5,13 +5,21 @@ let uiLang = aiTransDetect();
 let providers = [];
 let currentHost = '';
 let settings = {}; // cached snapshot
+let keyVisible = false; // 密钥明文显示开关
 
 function t(key, vars) { return aiTransT(uiLang, key, vars); }
+
+function refreshKeyHint() {
+  const p = currentProvider();
+  $('keyFor').textContent = p ? t('keyFor', { p: (p.id === 'custom' ? t('customProvider') : p.name) }) : '';
+}
 
 function applyI18n() {
   document.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = t(el.getAttribute('data-i18n')); });
   document.querySelectorAll('[data-i18n-ph]').forEach((el) => { el.placeholder = t(el.getAttribute('data-i18n-ph')); });
   $('uiLangAutoOpt').textContent = t('uiLangAuto');
+  $('toggleKey').title = t(keyVisible ? 'hideKey' : 'showKey');
+  refreshKeyHint();
   // refresh provider names (custom has a localized label)
   fillProviders();
 }
@@ -87,6 +95,7 @@ function onProviderChange() {
   // prefill API key for this provider
   const apiKeys = settings.apiKeys || {};
   $('apiKey').value = apiKeys[p ? p.id : ''] || '';
+  refreshKeyHint();
   // balance row visibility
   $('statBalance').hidden = !(p && p.id === 'deepseek');
   if (p && p.id === 'deepseek') loadBalance();
@@ -146,9 +155,10 @@ async function load() {
 
 // 自动保存：所有改动即时落盘（无"保存"按钮）；key 留空 = 清除该服务商的密钥
 let saveTimer = null;
+let pendingProvider = null; // 输入那一刻绑定的服务商，防止防抖保存写到错误的服务商名下
 
-async function persistSettings() {
-  const provId = $('provider').value;
+async function persistSettings(provId) {
+  provId = provId || $('provider').value;
   const s = await chrome.storage.local.get(['apiKeys', 'autoSites']);
   const apiKeys = s.apiKeys || {};
   const autoSites = s.autoSites || {};
@@ -185,7 +195,8 @@ async function persistSettings() {
 
 function scheduleAutoSave() {
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(persistSettings, 400);
+  pendingProvider = $('provider').value; // 输入那一刻记住服务商归属
+  saveTimer = setTimeout(() => persistSettings(pendingProvider), 400);
 }
 
 // ---------- Statistics & balance ----------
@@ -264,6 +275,12 @@ $('uiLang').addEventListener('change', async () => {
       chrome.tabs.sendMessage(tab.id, { type: 'DS_SETTINGS', settings: { uiLang: v } }).catch(() => {});
     }
   } catch (e) {}
+});
+$('toggleKey').addEventListener('click', () => {
+  keyVisible = !keyVisible;
+  $('apiKey').type = keyVisible ? 'text' : 'password';
+  $('toggleKey').textContent = keyVisible ? '🙈' : '👁';
+  $('toggleKey').title = t(keyVisible ? 'hideKey' : 'showKey');
 });
 $('provider').addEventListener('change', () => { onProviderChange(); persistSettings(); });
 $('apiKey').addEventListener('input', scheduleAutoSave);

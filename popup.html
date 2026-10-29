@@ -9,7 +9,7 @@
   <header>
     <img src="icons/icon48.png" alt="AI-Trans">
     <div class="head-text">
-      <div class="title">AI-Trans <span class="ver">v1.2.5</span></div>
+      <div class="title">AI-Trans <span class="ver">v1.2.6</span></div>
       <div class="sub" data-i18n="shortAlt"></div>
     </div>
   </header>
@@ -36,7 +36,11 @@
     <label data-i18n="apiKey"></label>
     <a id="keyUrl" href="#" target="_blank" data-i18n="getKey"></a>
   </div>
-  <input type="password" id="apiKey" data-i18n-ph="apiKeyPh" autocomplete="off" spellcheck="false">
+  <div class="key-wrap">
+    <input type="password" id="apiKey" data-i18n-ph="apiKeyPh" autocomplete="off" spellcheck="false">
+    <button id="toggleKey" class="btn-eye" title="">👁</button>
+  </div>
+  <div id="keyFor" class="hint"></div>
 
   <div class="label-row">
     <label data-i18n="model"></label>

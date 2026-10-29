@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "AI-Trans",
-  "version": "1.2.6",
-  "description": "Open-source AI translation for Chrome. Bring your own API key from mainstream AI providers or self-hosted endpoints. In-place page translation that preserves layout — no bloat, no tracking.",
+  "version": "1.2.7",
+  "description": "Open-source AI page translation. Bring your own key from DeepSeek, OpenAI, Gemini, Claude or self-hosted endpoints.",
   "permissions": ["storage"],
   "host_permissions": ["<all_urls>"],
   "background": {

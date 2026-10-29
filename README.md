@@ -78,6 +78,7 @@ AI-Trans is a minimalist Chrome extension that translates entire web pages with 
 - Right side: the translation (read-only).
 - Top bar: source language (defaults to **Auto detect**, the detected language is shown next to it, e.g. "Auto detect (English)") ⇄ **swap** button, and the target language (defaults to your browser language).
 - After each translation, the bottom-left corner shows the **tokens used** — or "translated from cache (no API call)" when the same text was translated before.
+- **Text-to-speech**: click 🔊 above the source or the translation to read it aloud with your system's local voices (free, offline). If a language voice isn't installed, a hint tells you to add it in your system settings.
 - The window is **draggable by its title bar and resizable from its bottom-right corner**; position, size and language choices are remembered. Click × to close.
 
 ### Statistics & balance

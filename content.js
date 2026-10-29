@@ -457,6 +457,13 @@
   let panelTimer = null;
   let panelSrc = ''; // 'auto' 或语言码
   let panelTgt = '';
+  let ttsVoices = []; // 系统可用语音（本地 TTS，无需网络和权限）
+
+  if (window.speechSynthesis) {
+    const loadVoices = () => { try { ttsVoices = window.speechSynthesis.getVoices(); } catch (e) {} };
+    loadVoices();
+    try { window.speechSynthesis.onvoiceschanged = loadVoices; } catch (e) {}
+  }
 
   function panelTargetDefault() {
     return settings.targetLang || aiTransDefaultTarget(settings.uiLang);
@@ -470,8 +477,12 @@
     'dutch': 'nl', 'polish': 'pl', 'turkish': 'tr', 'indonesian': 'id'
   };
 
+  function detectLangCode(enName) {
+    return DETECTED_MAP[String(enName || '').toLowerCase()] || '';
+  }
+
   function localizedLangName(enName) {
-    const code = DETECTED_MAP[String(enName || '').toLowerCase()];
+    const code = detectLangCode(enName);
     if (code) {
       try {
         const dn = new Intl.DisplayNames([aiTransLang(settings.uiLang)], { type: 'language' });
@@ -480,6 +491,36 @@
       } catch (e) {}
     }
     return enName || '';
+  }
+
+  // 本地语音朗读：有对应语言语音就读；没有则提示用户去系统设置安装
+  function pickVoice(langCode) {
+    if (!ttsVoices.length && window.speechSynthesis) {
+      try { ttsVoices = window.speechSynthesis.getVoices(); } catch (e) {}
+    }
+    const code = String(langCode || '').toLowerCase().replace('_', '-');
+    if (!code) return null;
+    let v = ttsVoices.find((x) => x.lang && x.lang.toLowerCase() === code);
+    if (!v) v = ttsVoices.find((x) => x.lang && x.lang.toLowerCase().startsWith(code.split('-')[0]));
+    return v || null;
+  }
+
+  function speakPanelText(area, sel, isSource) {
+    if (!window.speechSynthesis) return;
+    const text = area.value.trim();
+    if (!text) return;
+    let langCode = sel.value;
+    if (isSource && sel.value === 'auto') langCode = panel._detectedCode || '';
+    try { window.speechSynthesis.cancel(); } catch (e) {}
+    const v = langCode ? pickVoice(langCode) : null;
+    if (langCode && !v) {
+      setPanelHint({ kind: 'novoice' });
+      return;
+    }
+    const u = new SpeechSynthesisUtterance(text);
+    if (v) { u.voice = v; u.lang = v.lang; }
+    else if (langCode) u.lang = langCode;
+    window.speechSynthesis.speak(u);
   }
 
   // 检测结果显示在"自动检测"右侧，如：自动检测（英语）
@@ -572,6 +613,7 @@
     else if (d.kind === 'detected') panel._els.hint.textContent = t('detected', { l: d.l });
     else if (d.kind === 'tokens') panel._els.hint.textContent = t('panelTokens', { t: d.t });
     else if (d.kind === 'cached') panel._els.hint.textContent = t('panelCached');
+    else if (d.kind === 'novoice') panel._els.hint.textContent = t('novoice');
     else if (d.kind === 'err') panel._els.hint.textContent = aiTransErrText(settings.uiLang, d.code, d.detail);
     else panel._els.hint.textContent = String(d.text || '');
   }
@@ -583,6 +625,7 @@
     if (!text) {
       els.tgtArea.value = '';
       panel._detected = '';
+      panel._detectedCode = '';
       updateAutoOption();
       setPanelHint(null);
       return;
@@ -597,6 +640,7 @@
       cache.delete(ck); cache.set(ck, hit); // LRU 刷新
       els.tgtArea.value = hit;
       panel._detected = '';
+      panel._detectedCode = '';
       updateAutoOption();
       setPanelHint({ kind: 'cached' });
       return;
@@ -618,6 +662,7 @@
         cacheSet(ck, tr); // 写入缓存，下次秒回
       }
       panel._detected = (src === 'auto' && res.detected) ? localizedLangName(res.detected) : '';
+      panel._detectedCode = (src === 'auto' && res.detected) ? detectLangCode(res.detected) : '';
       updateAutoOption();
       const used = res.usage ? (res.usage.prompt_tokens || 0) + (res.usage.completion_tokens || 0) : 0;
       setPanelHint({ kind: 'tokens', t: fmtTokens(used) });
@@ -647,7 +692,10 @@
     close.textContent = '×';
     close.type = 'button';
     close.style.cssText = 'border:0;background:none;color:#fff;font-size:18px;cursor:pointer;line-height:1;padding:0 2px;';
-    close.addEventListener('click', () => { panel.hidden = true; });
+    close.addEventListener('click', () => {
+      try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) {}
+      panel.hidden = true;
+    });
     header.append(title, close);
 
     const langRow = document.createElement('div');
@@ -677,7 +725,27 @@
       'padding:8px;font:inherit;background:#f9fafb;';
     srcArea.style.cssText = areaStyle;
     tgtArea.style.cssText = areaStyle;
-    body.append(srcArea, tgtArea);
+
+    const mkSpk = (title, handler) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = '🔊';
+      b.title = title;
+      b.style.cssText =
+        'align-self:flex-end;border:0;background:none;cursor:pointer;font-size:14px;' +
+        'padding:1px 4px;color:#6b7280;';
+      b.addEventListener('click', handler);
+      return b;
+    };
+    const srcSpk = mkSpk(t('speakSrc'), () => speakPanelText(srcArea, srcSel, true));
+    const tgtSpk = mkSpk(t('speakTgt'), () => speakPanelText(tgtArea, tgtSel, false));
+    const mkCol = (area, spk) => {
+      const col = document.createElement('div');
+      col.style.cssText = 'display:flex;flex-direction:column;flex:1;min-width:0;min-height:0;';
+      col.append(spk, area);
+      return col;
+    };
+    body.append(mkCol(srcArea, srcSpk), mkCol(tgtArea, tgtSpk));
 
     const foot = document.createElement('div');
     foot.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:8px 10px 10px;';
@@ -693,8 +761,9 @@
 
     panel.append(header, langRow, body, foot);
     (document.body || document.documentElement).appendChild(panel);
-    panel._els = { title, srcSel, tgtSel, srcArea, tgtArea, hint, goBtn, swapBtn, body };
+    panel._els = { title, srcSel, tgtSel, srcArea, tgtArea, hint, goBtn, swapBtn, body, srcSpk, tgtSpk };
     panel._detected = '';
+    panel._detectedCode = '';
     responsivePanelBody();
 
     // 右下角拖拽改尺寸（宽度/高度都记忆）
@@ -838,6 +907,8 @@
           panel._els.tgtArea.placeholder = t('phTarget');
           panel._els.goBtn.textContent = t('panelTranslate');
           panel._els.swapBtn.title = t('swapTitle');
+          panel._els.srcSpk.title = t('speakSrc');
+          panel._els.tgtSpk.title = t('speakTgt');
           updateAutoOption();
           renderPanelHint(); // 已有提示（如错误）立即用新语言重渲染
         }

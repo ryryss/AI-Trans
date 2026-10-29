@@ -161,7 +161,9 @@ let pendingProvider = null; // 输入那一刻绑定的服务商，防止防抖�
 let pendingSave = Promise.resolve(); // 待完成的保存，点击翻译前先等它落盘
 
 function persistSettings(provId) {
-  provId = provId || $('provider').value;
+  // 防止事件对象被当作参数传入（addEventListener 会把 Event 传给处理函数），
+  // 否则 provider 被序列化失败导致整个保存静默丢失
+  provId = (typeof provId === 'string' && provId) ? provId : $('provider').value;
   // 用内存副本直接构建 payload 并同步发起写入（不先异步读存储），
   // 面板关闭瞬间保存也不丢失（写入请求在上下文销毁前已发出）
   settings.apiKeys = settings.apiKeys || {};
@@ -283,14 +285,14 @@ $('toggleKey').addEventListener('click', () => {
 });
 $('provider').addEventListener('change', () => { onProviderChange(); persistSettings(); });
 $('apiKey').addEventListener('input', scheduleAutoSave);
-$('apiKey').addEventListener('change', persistSettings); // 失焦立即落盘，防止输入完就关面板丢数据
+$('apiKey').addEventListener('change', () => persistSettings()); // 失焦立即落盘，防止输入完就关面板丢数据
 $('model').addEventListener('input', scheduleAutoSave);
-$('model').addEventListener('change', persistSettings);
+$('model').addEventListener('change', () => persistSettings());
 $('baseURL').addEventListener('input', scheduleAutoSave);
-$('baseURL').addEventListener('change', persistSettings);
-$('targetLang').addEventListener('change', persistSettings);
-$('autoSite').addEventListener('change', persistSettings);
-$('autoGlobal').addEventListener('change', persistSettings);
+$('baseURL').addEventListener('change', () => persistSettings());
+$('targetLang').addEventListener('change', () => persistSettings());
+$('autoSite').addEventListener('change', () => persistSettings());
+$('autoGlobal').addEventListener('change', () => persistSettings());
 $('testConn').addEventListener('click', async () => {
   // 用当前表单内容做连通性测试（无需先保存），直达服务商 /models 接口
   setStatus(t('testConn') + '…');

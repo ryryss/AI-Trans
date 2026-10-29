@@ -9,13 +9,14 @@
   <header>
     <img src="icons/icon48.png" alt="AI-Trans">
     <div class="head-text">
-      <div class="title">AI-Trans <span class="ver">v1.0.2</span></div>
+      <div class="title">AI-Trans <span class="ver">v1.1.0</span></div>
       <div class="sub" data-i18n="shortAlt"></div>
     </div>
   </header>
 
   <label data-i18n="uiLanguage"></label>
   <select id="uiLang">
+    <option value="auto" id="uiLangAutoOpt">Auto</option>
     <option value="en">English</option>
     <option value="zh-CN">简体中文</option>
     <option value="zh-TW">繁體中文</option>
@@ -70,6 +71,7 @@
   </select>
 
   <button class="btn-primary" id="save" data-i18n="save"></button>
+  <button class="btn-line" id="testConn" data-i18n="testConn"></button>
 
   <div class="checks">
     <label id="autoSiteLabel"><input type="checkbox" id="autoSite"> <span data-i18n="autoSite"></span></label>
@@ -94,6 +96,7 @@
 
   <div class="foot">
     <a id="githubLink" href="https://github.com/ryryss/AI-Trans" target="_blank" data-i18n="github"></a>
+    <button id="resetAll" class="btn-reset" data-i18n="resetAll"></button>
   </div>
 </div>
 <script src="i18n.js"></script>

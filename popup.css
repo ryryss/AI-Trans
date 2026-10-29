@@ -41,3 +41,5 @@ button { cursor: pointer; border: 0; border-radius: 8px; padding: 8px 12px; font
 .foot { margin-top: 10px; font-size: 12px; text-align: center; }
 .foot a { color: #3b5bdb; text-decoration: none; }
 .foot a:hover { text-decoration: underline; }
+.btn-reset { background: none; border: 0; color: #9ca3af; font-size: 12px; padding: 0; cursor: pointer; margin-left: 10px; font-family: inherit; }
+.btn-reset:hover { color: #dc2626; text-decoration: underline; }

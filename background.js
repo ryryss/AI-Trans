@@ -63,6 +63,8 @@ function explainHTTP(status, uiLang) {
 function friendlyError(e, uiLang) {
   const m = String((e && e.message) || e);
   if (m === 'EMPTY') return aiTransT(uiLang, 'errEmpty');
+  if (m === 'BADJSON') return aiTransT(uiLang, 'errBadJSON');
+  if (/timeout|abort/i.test(m)) return aiTransT(uiLang, 'errTimeout');
   const hm = m.match(/^HTTP (\d{3})(?:\s*·\s*)?([\s\S]*)$/);
   if (hm) {
     const base = explainHTTP(parseInt(hm[1], 10), uiLang);
@@ -151,7 +153,8 @@ async function callOpenAICompatible(baseURL, apiKey, model, system, userContent,
   const resp = await fetch(baseURL.replace(/\/+$/, '') + '/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + apiKey },
-    body: JSON.stringify(body)
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(60000)
   });
   if (!resp.ok) throw new Error('HTTP ' + resp.status + ' · ' + (await apiErrorDetail(resp)));
   const data = await resp.json();
@@ -165,7 +168,8 @@ async function callAnthropic(baseURL, apiKey, model, system, userContent) {
   const resp = await fetch(baseURL.replace(/\/+$/, ''), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model, max_tokens: 16384, system, messages: [{ role: 'user', content: userContent }] })
+    body: JSON.stringify({ model, max_tokens: 16384, system, messages: [{ role: 'user', content: userContent }] }),
+    signal: AbortSignal.timeout(60000)
   });
   if (!resp.ok) throw new Error('HTTP ' + resp.status + ' · ' + (await apiErrorDetail(resp)));
   const data = await resp.json();
@@ -175,21 +179,19 @@ async function callAnthropic(baseURL, apiKey, model, system, userContent) {
   return { obj: parseJSONish(content), usage: { prompt_tokens: u.input_tokens || 0, completion_tokens: u.output_tokens || 0, prompt_cache_hit_tokens: 0 } };
 }
 
-async function callAI(texts) {
-  const s = await chrome.storage.local.get(['provider', 'apiKeys', 'model', 'customBaseURL', 'customModel', 'targetLang', 'uiLang']);
+// Resolve the active provider configuration from settings (shared by translation & connection test)
+function resolveConfig(s) {
   const provId = s.provider || 'deepseek';
   const apiKeys = s.apiKeys || {};
-  const uiLang = s.uiLang || aiTransDetect();
+  const uiLang = (s.uiLang && s.uiLang !== 'auto') ? aiTransLang(s.uiLang) : aiTransDetect();
   const targetCode = s.targetLang || aiTransDefaultTarget(uiLang);
   const targetName = AI_TRANS_TARGETS[targetCode] || 'English';
 
   let prov, baseURL, model, apiKey, isDeepSeek = false;
-
   if (provId === 'custom') {
     baseURL = String(s.customBaseURL || '').trim().replace(/\/+$/, '');
     model = String(s.customModel || '').trim();
     apiKey = apiKeys.custom || '';
-    if (!baseURL) throw new Error(aiTransT(uiLang, 'errNoModel'));
   } else {
     prov = PROVIDERS.find((p) => p.id === provId);
     if (!prov) prov = PROVIDERS[0];
@@ -198,6 +200,15 @@ async function callAI(texts) {
     apiKey = apiKeys[provId] || '';
     isDeepSeek = provId === 'deepseek';
   }
+  return { provId, prov, baseURL, model, apiKey, isDeepSeek, uiLang, targetName };
+}
+
+async function callAI(texts) {
+  const s = await chrome.storage.local.get(['provider', 'apiKeys', 'model', 'customBaseURL', 'customModel', 'targetLang', 'uiLang']);
+  const cfg = resolveConfig(s);
+  const { prov, baseURL, model, apiKey, isDeepSeek, uiLang, targetName } = cfg;
+
+  if (!baseURL) throw new Error(aiTransT(uiLang, 'errNoModel'));
   if (!apiKey && !(prov && prov.noKey)) throw new Error(aiTransT(uiLang, 'errNoKey'));
   if (!model) throw new Error(aiTransT(uiLang, 'errNoModel'));
 
@@ -214,12 +225,41 @@ async function callAI(texts) {
       result = await callOpenAICompatible(baseURL, apiKey, model, system, userContent, extra);
     }
   } catch (e) {
-    throw new Error(friendlyError(e, uiLang));
+    let msg = friendlyError(e, uiLang);
+    if (/localhost|127\.0\.0\.1/.test(baseURL || '')) msg += ' · ' + aiTransT(uiLang, 'errOllama');
+    throw new Error(msg);
   }
 
-  const translations = Array.isArray(result.obj.translations) ? result.obj.translations : [];
+  if (!Array.isArray(result.obj.translations)) throw new Error(aiTransT(uiLang, 'errBadJSON'));
+  const translations = result.obj.translations.slice();
   while (translations.length < texts.length) translations.push(null); // 缺失项置 null，内容脚本会保留原文
   return { translations, usage: result.usage, isDeepSeek, cost: isDeepSeek ? calcDeepSeekCost(result.usage) : 0 };
+}
+
+// Connection test: hit the provider's /models endpoint (read-only, cheap)
+async function testConnection(config) {
+  let s = config;
+  if (!s) s = await chrome.storage.local.get(['provider', 'apiKeys', 'model', 'customBaseURL', 'customModel', 'targetLang', 'uiLang']);
+  const cfg = resolveConfig(s);
+  const { prov, baseURL, apiKey, uiLang } = cfg;
+  const t0 = Date.now();
+  const isAnthropic = prov && prov.type === 'anthropic';
+  const headers = isAnthropic
+    ? { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' }
+    : { Authorization: 'Bearer ' + apiKey };
+  const url = isAnthropic
+    ? baseURL.replace(/\/messages$/, '') + '/models'
+    : baseURL.replace(/\/+$/, '') + '/models';
+  try {
+    const resp = await fetch(url, { headers, signal: AbortSignal.timeout(15000) });
+    const latency = Date.now() - t0;
+    if (!resp.ok) {
+      return { ok: false, latency, error: friendlyError(new Error('HTTP ' + resp.status + ' · ' + await apiErrorDetail(resp)), uiLang) };
+    }
+    return { ok: true, latency };
+  } catch (e) {
+    return { ok: false, latency: Date.now() - t0, error: friendlyError(e, uiLang) };
+  }
 }
 
 // ---------- Message router ----------
@@ -254,6 +294,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
   if (msg.type === 'DS_CLEAR_STATS') {
     chrome.storage.local.remove([STATS_KEY, DAILY_KEY]).then(() => sendResponse({ ok: true })).catch(() => sendResponse({ ok: false }));
+    return true;
+  }
+
+  if (msg.type === 'DS_TEST') {
+    testConnection(msg.config).then((r) => sendResponse(r));
     return true;
   }
 

@@ -11,6 +11,7 @@ function t(key, vars) { return aiTransT(uiLang, key, vars); }
 function applyI18n() {
   document.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = t(el.getAttribute('data-i18n')); });
   document.querySelectorAll('[data-i18n-ph]').forEach((el) => { el.placeholder = t(el.getAttribute('data-i18n-ph')); });
+  $('uiLangAutoOpt').textContent = t('uiLangAuto');
   // refresh provider names (custom has a localized label)
   fillProviders();
 }
@@ -89,8 +90,9 @@ async function load() {
     'customBaseURL', 'customModel', 'globalAuto', 'autoSites'
   ]);
   settings = s;
-  uiLang = aiTransLang(s.uiLang || aiTransDetect());
-  $('uiLang').value = uiLang;
+  // 'auto' = follow the browser language dynamically
+  uiLang = (s.uiLang && s.uiLang !== 'auto') ? aiTransLang(s.uiLang) : aiTransDetect();
+  $('uiLang').value = s.uiLang || 'auto';
 
   let provResp = { providers: [] };
   try {
@@ -228,13 +230,43 @@ async function sendToTab(type) {
 }
 
 // ---------- Events ----------
-$('uiLang').addEventListener('change', async () => {
-  uiLang = aiTransLang($('uiLang').value);
+$('uiLang').addEventListener('change', () => {
+  const v = $('uiLang').value;
+  uiLang = (v === 'auto') ? aiTransDetect() : aiTransLang(v);
   applyI18n();
   $('targetLang').value = settings.targetLang || aiTransDefaultTarget(uiLang);
 });
 $('provider').addEventListener('change', onProviderChange);
 $('save').addEventListener('click', saveSettings);
+$('testConn').addEventListener('click', async () => {
+  // 用当前表单内容做连通性测试（无需先保存），直达服务商 /models 接口
+  setStatus(t('testConn') + '…');
+  try {
+    const p = currentProvider();
+    const apiKeys = {};
+    apiKeys[p ? p.id : 'custom'] = $('apiKey').value.trim();
+    const config = {
+      provider: $('provider').value,
+      apiKeys,
+      model: $('model').value.trim(),
+      customBaseURL: $('baseURL').value.trim(),
+      customModel: $('model').value.trim(),
+      uiLang: $('uiLang').value
+    };
+    const res = await chrome.runtime.sendMessage({ type: 'DS_TEST', config });
+    if (res && res.ok) setStatus(t('connOK', { ms: res.latency }));
+    else setStatus(t('connFail', { e: (res && res.error) || '' }), true);
+  } catch (e) {
+    setStatus(t('connFail', { e: String((e && e.message) || e) }), true);
+  }
+});
+$('resetAll').addEventListener('click', async () => {
+  if (!confirm(t('resetConfirm'))) return;
+  try {
+    await chrome.storage.local.clear(); // 清空密钥、缓存、统计、设置、按钮位置
+    location.reload();
+  } catch (e) {}
+});
 $('translate').addEventListener('click', () => sendToTab('DS_TRANSLATE'));
 $('restore').addEventListener('click', () => sendToTab('DS_RESTORE'));
 $('clearStats').addEventListener('click', async () => {

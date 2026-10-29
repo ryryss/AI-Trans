@@ -15,7 +15,8 @@ AI-Trans is a minimalist Chrome extension that translates entire web pages with 
 - **Draggable floating buttons** — one tap to translate, one tap to restore; the position is remembered
 - **Local translation cache** — translated sentences are cached in your browser, so revisiting a page is instant and costs nothing
 - **Usage & balance display** — request count, input/output tokens, estimated spend (DeepSeek pricing), and your real DeepSeek balance via the official API
-- **Fully localized UI** — English, 简体中文, 繁體中文, 日本語, 한국어, Deutsch, Français, Español, Русский, Português (BR); follows your browser language by default
+- **Built-in diagnostics** — one-click connection test against your provider, and every error explained in plain language with a suggested fix
+- **Fully localized UI** — English, 简体中文, 繁體中文, 日本語, 한국어, Deutsch, Français, Español, Русский, Português (BR); follows your browser language by default (or choose explicitly)
 - **Privacy-first** — your API key never leaves your browser except to call the provider you configured; there is no AI-Trans server
 
 ## 🚀 Install
@@ -90,8 +91,10 @@ Several providers let you test AI-Trans without spending anything:
 
 ## ❓ FAQ
 
-- **Nothing gets translated?** Verify the API key and model; `chrome://` pages cannot be translated. Reload tabs that were open before installation.
-- **What does a 404 (or other error) mean?** Every failure is explained in plain language with a suggested fix. Common cases: 404 → wrong Base URL or model name; 401 → invalid/expired key; 402 → insufficient balance; 429 → rate limit or daily free quota reached; 5xx → provider server issue, retry later.
+- **Nothing gets translated?** Verify the API key and model; `chrome://` pages cannot be translated. Reload tabs that were open before installation. Use **Test connection** in the popup to check whether your browser can actually reach the provider.
+- **What does a 404 (or other error) mean?** Every failure is explained in plain language with a suggested fix. Common cases: 404 → wrong Base URL or model name; 401 → invalid/expired key; 402 → insufficient balance; 403 → no access to this model; 429 → rate limit or daily free quota reached; 5xx → provider server issue, retry later; timeout/network → the provider is unreachable from your network.
+- **I'm in mainland China — overseas providers fail.** Google/OpenAI/Anthropic endpoints are generally not directly reachable from mainland China. Use a proxy, or pick a domestic provider: SiliconFlow, Zhipu GLM or DeepSeek all work without one.
+- **How do I wipe everything?** Uninstall the extension from `chrome://extensions`, or click **Reset all data** at the bottom of the popup (clears keys, cache, statistics, settings and widget position).
 - **Translation feels slow?** Use a fast non-reasoning model. DeepSeek's thinking mode is already disabled by the extension; provider-side peak hours also affect latency.
 - **Can I use a local model?** Yes — pick **Ollama (local)** or any self-hosted OpenAI-compatible endpoint.
 

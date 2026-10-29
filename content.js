@@ -415,6 +415,7 @@
     else if (msg.type === 'DS_TOGGLE') { translated.size ? restorePage() : (translatePage(document.body), startObserver()); }
     else if (msg.type === 'DS_SETTINGS') {
       settings = Object.assign(settings, msg.settings || {});
+      settings.uiLang = (!settings.uiLang || settings.uiLang === 'auto') ? aiTransDetect() : aiTransLang(settings.uiLang);
       // 语言切换后即时更新浮动按钮文案与提示
       if (widgetButtons.trans) {
         widgetButtons.trans.textContent = t('wBtnTranslate');
@@ -431,8 +432,9 @@
   (async () => {
     try {
       const s = await chrome.storage.local.get(['provider', 'model', 'targetLang', 'uiLang', 'globalAuto', 'autoSites', CACHE_KEY]);
-      if (s.uiLang) settings.uiLang = aiTransLang(s.uiLang);
       settings = Object.assign(settings, s);
+      // 'auto' = 跟随浏览器语言（动态检测）
+      settings.uiLang = (!settings.uiLang || settings.uiLang === 'auto') ? aiTransDetect() : aiTransLang(settings.uiLang);
       const obj = s[CACHE_KEY];
       if (obj && typeof obj === 'object') {
         for (const [k, v] of Object.entries(obj)) {

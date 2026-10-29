@@ -33,7 +33,13 @@ AI-Trans is a minimalist Chrome extension that translates entire web pages with 
 ### From the Chrome Web Store
 *Coming soon.*
 
-### Load unpacked (developer mode)
+### From a release (no git needed)
+1. Download the latest `ai-trans-*.zip` from [Releases](https://github.com/ryryss/AI-Trans/releases) and unzip it.
+2. Open `chrome://extensions` and enable **Developer mode** (top-right).
+3. Click **Load unpacked** and select the unzipped folder.
+4. Pin the AI-Trans icon to your toolbar.
+
+### From source (developers)
 1. Clone or download this repository.
 2. Open `chrome://extensions` and enable **Developer mode** (top-right).
 3. Click **Load unpacked** and select the project folder.

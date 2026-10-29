@@ -33,7 +33,13 @@ AI-Trans 是一款极简的 Chrome 扩展，用 AI 把整个网页**原地翻译
 ### 从 Chrome 应用商店
 *即将上线。*
 
-### 开发者模式加载
+### 从 Release 下载（无需 git）
+1. 从 [Releases](https://github.com/ryryss/AI-Trans/releases) 下载最新的 `ai-trans-*.zip` 并解压。
+2. 打开 `chrome://extensions`，开启右上角「**开发者模式**」。
+3. 点击「**加载已解压的扩展程序**」，选择解压后的文件夹。
+4. 建议把 AI-Trans 图标固定到工具栏。
+
+### 从源码安装（开发者）
 1. 克隆或下载本仓库。
 2. 打开 `chrome://extensions`，开启右上角「**开发者模式**」。
 3. 点击「**加载已解压的扩展程序**」，选择本项目文件夹。

@@ -524,6 +524,13 @@
   }
 
   // 检测结果显示在"自动检测"右侧，如：自动检测（英语）
+  function setPanelVisible(visible) {
+    if (!panel) return;
+    // 注意：面板有内联 display:flex，必须用 style.display 控制显隐，
+    // 不能用 hidden 属性（内联样式优先级高于 UA 样式表，hidden 会失效）
+    panel.style.display = visible ? 'flex' : 'none';
+  }
+
   function updateAutoOption() {
     if (!panel) return;
     const o = panel._els.srcSel.options[0];
@@ -539,7 +546,7 @@
   }
 
   window.addEventListener('resize', () => {
-    if (!panel || panel.hidden) return;
+    if (!panel || panel.style.display === 'none') return;
     const r = panel.getBoundingClientRect();
     applyPanelPos(
       panel,
@@ -698,12 +705,13 @@
     panel = document.createElement('div');
     panel.id = PANEL_ID;
     panel.setAttribute('translate', 'no');
-    panel.hidden = true;
     panel.style.cssText =
       'position:fixed;right:70px;bottom:16px;z-index:2147483646;width:560px;height:380px;max-width:calc(100vw - 32px);' +
       'background:#fff;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.28);' +
       'font:13px/1.5 system-ui,"Segoe UI",sans-serif;color:#1f2937;overflow:hidden;' +
-      'display:flex;flex-direction:column;user-select:none;';
+      'flex-direction:column;user-select:none;';
+    // 必须在 cssText 之后设置：初始隐藏（内联 display 会覆盖 hidden 属性，故显式控制）
+    panel.style.display = 'none';
 
     const header = document.createElement('div');
     header.style.cssText =
@@ -717,7 +725,7 @@
     close.style.cssText = 'border:0;background:none;color:#fff;font-size:18px;cursor:pointer;line-height:1;padding:0 2px;';
     close.addEventListener('click', () => {
       try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) {}
-      panel.hidden = true;
+      setPanelVisible(false);
     });
     header.append(title, close);
 
@@ -884,8 +892,9 @@
 
   function togglePanel() {
     if (!panel) createPanel();
-    panel.hidden = !panel.hidden;
-    if (!panel.hidden) panel._els.srcArea.focus();
+    const opening = panel.style.display === 'none';
+    setPanelVisible(opening);
+    if (opening) panel._els.srcArea.focus();
   }
 
   // ---------- Messages from popup / shortcut ----------
